@@ -1,0 +1,296 @@
+# 🎮 Mini Tank Fire: Online
+
+A **production-grade** top-view multiplayer shooter game with professional UI/UX, voice chat, and real-time gameplay.
+
+## ✨ Features
+
+### 🎯 Core Gameplay
+- **Real-time Multiplayer**: WebSocket-based synchronization at 20 FPS
+- **Smooth Tank Movement**: WASD controls with responsive aiming
+- **Combat System**: Click-to-fire with cooldown, collision detection
+- **Power-ups**: Shield, Speed Boost, Double Fire with visual effects
+- **Respawn Mechanics**: 3-second countdown with animated overlay
+
+### 🎨 Professional UI/UX
+- **Modern HUD**: Health, kills, deaths, power-up indicators
+- **Live Leaderboard**: Real-time top 10 rankings
+- **Kill Feed**: Kill notifications with fade-out animations
+- **Minimap**: Real-time tactical overview
+- **Responsive Design**: Clean, neon-themed interface
+- **Visual Effects**: Particle explosions, screen shake, glowing elements
+- **Smooth Animations**: CSS transitions, fade-ins, slide effects
+
+### 🎤 Voice Chat
+- **WebRTC P2P**: Peer-to-peer voice communication
+- **Push-to-Talk**: Toggle microphone on/off
+- **Auto Configuration**: Echo cancellation, noise suppression
+- **Visual Indicators**: Microphone status icon
+- **Low Latency**: Direct peer connections
+
+### 💬 Enhanced Chat System
+- **Text Chat**: Real-time messaging between players
+- **Keyboard Shortcuts**: Enter to open, ESC to close
+- **Message History**: Scrollable chat with 20-message limit
+- **Sender Highlighting**: Color-coded player names
+- **Collapsible Panel**: Toggle chat visibility
+
+### 🎯 Game Features
+- **Power-up System**: 3 types with rotating animations
+- **Health Bars**: Visual health indicators above tanks
+- **Shield Effects**: Glowing border around protected tanks
+- **Bullet Trails**: Visual feedback for projectiles
+- **Speed Indicators**: Visual effect for speed boost
+- **Tank Customization**: Different colors for self/enemies
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Java 11+** (for backend)
+- **Maven** (build tool)
+- **Python 3** (for serving frontend)
+- **Modern Browser** (Chrome, Firefox, Edge)
+
+### Installation
+
+1. **Clone or navigate to the game directory**
+   ```bash
+   cd Game
+   ```
+
+2. **Start the Backend Server**
+   ```bash
+   cd backend
+   mvn clean compile exec:java
+   ```
+   Server runs on `ws://localhost:8080/game`
+
+3. **Start the Frontend Server**
+   ```bash
+   cd frontend
+   python -m http.server 3000
+   ```
+   Open `http://localhost:3000` in your browser
+
+4. **Play!**
+   - Enter your callsign
+   - Click "Deploy to Battle"
+   - Use WASD to move, mouse to aim, click to fire
+   - Press Enter to chat
+   - Click microphone icon for voice chat
+
+## 🎮 Controls
+
+| Action | Control |
+|--------|---------|
+| **Move** | W/A/S/D or Arrow Keys |
+| **Aim** | Mouse Movement |
+| **Fire** | Left Click or Spacebar |
+| **Chat** | Enter (type), Enter (send), ESC (close) |
+| **Voice** | Click microphone icon |
+
+## 🏗️ Architecture
+
+### Backend (Java)
+```
+backend/
+├── pom.xml                      # Maven configuration
+└── src/main/java/com/minitankfire/
+    ├── GameServer.java          # Jetty WebSocket server
+    ├── GameWebSocket.java       # Connection handler
+    ├── GameRoom.java            # Game logic & state
+    ├── Player.java              # Player entity
+    ├── Bullet.java              # Projectile entity
+    ├── PowerUp.java             # Power-up entity
+    └── Message.java             # Message protocols
+```
+
+**Key Components:**
+- **Game Loop**: 50ms tick rate (20 FPS)
+- **Collision Detection**: AABB bounding boxes
+- **State Sync**: Broadcasts game state every frame
+- **Voice Signaling**: WebRTC offer/answer/ICE forwarding
+
+### Frontend (Web)
+```
+frontend/
+├── index.html                   # Game UI structure
+├── css/
+│   └── style.css               # Professional styling
+└── js/
+    └── game.js                 # Game client logic
+```
+
+**Key Components:**
+- **Canvas Rendering**: 1200×800 game area
+- **WebSocket Client**: Real-time communication
+- **WebRTC Manager**: P2P voice connections
+- **Particle System**: Explosion effects
+- **HUD Manager**: Stats, leaderboard, chat
+
+## 📡 Network Protocol
+
+### Message Types
+
+| Type | Direction | Description |
+|------|-----------|-------------|
+| `join` | Client → Server | Player joins with name |
+| `move` | Client → Server | Position & angle update |
+| `fire` | Client → Server | Fire weapon |
+| `chat` | Client ↔ Server | Text message |
+| `update` | Server → Client | Game state broadcast |
+| `hit` | Server → Client | Collision notification |
+| `respawn` | Server → Client | Player respawn |
+| `voice-offer` | Client ↔ Client | WebRTC offer (via server) |
+| `voice-answer` | Client ↔ Client | WebRTC answer (via server) |
+| `voice-ice` | Client ↔ Client | ICE candidate (via server) |
+
+### Example Messages
+
+```json
+// Join
+{ "type": "join", "name": "Player1" }
+
+// Move
+{ "type": "move", "x": 400, "y": 300, "angle": 45 }
+
+// Fire
+{ "type": "fire" }
+
+// Update
+{
+  "type": "update",
+  "players": [{ "id": "...", "name": "...", "x": 400, "y": 300, ... }],
+  "bullets": [{ "id": "...", "x": 450, "y": 320, ... }],
+  "powerUps": [{ "id": "...", "type": "SHIELD", ... }]
+}
+```
+
+## 🎨 Visual Design
+
+### Color Palette
+- **Primary**: `#00ff88` (Neon Green)
+- **Secondary**: `#00ffcc` (Cyan)
+- **Accent**: `#ffaa00` (Gold)
+- **Danger**: `#ff4444` (Red)
+- **Background**: `#0a0a0a` - `#1a1a2e` (Dark gradient)
+
+### UI Elements
+- **Panels**: Semi-transparent black with neon borders
+- **Buttons**: Gradient fills with hover animations
+- **Text**: White with neon shadows
+- **Icons**: Font Awesome 6.4.0
+
+## 🔧 Configuration
+
+### Server Settings
+```java
+// GameRoom.java
+private static final int MAP_WIDTH = 1200;
+private static final int MAP_HEIGHT = 800;
+private static final int PLAYER_SPEED = 3;
+private static final int BULLET_SPEED = 8;
+```
+
+### Client Settings
+```javascript
+// game.js
+this.fireRate = 500; // ms between shots
+this.canvas.width = 1200;
+this.canvas.height = 800;
+```
+
+## 🎯 Power-ups
+
+| Type | Effect | Duration | Color |
+|------|--------|----------|-------|
+| **Shield** | Ignore next hit | 5 seconds | Cyan |
+| **Speed Boost** | +50% movement speed | 3 seconds | Yellow |
+| **Double Fire** | Fire 2 bullets | 10 seconds | Magenta |
+
+## 📊 Scoring System
+
+| Event | Points |
+|-------|--------|
+| Kill Enemy | +1 |
+| Death | −1 |
+| Collect Power-up | +0.5 |
+
+## 🔮 Future Enhancements
+
+- [ ] **Team Mode**: Red vs Blue teams
+- [ ] **Multiple Maps**: Different arena layouts
+- [ ] **AI Bots**: Fill empty slots
+- [ ] **Tank Upgrades**: Damage, armor, speed tiers
+- [ ] **Custom Rooms**: Private lobbies
+- [ ] **Spectator Mode**: Watch ongoing matches
+- [ ] **Match History**: Stats tracking
+- [ ] **Sound Effects**: Weapon fire, explosions
+- [ ] **Background Music**: Ambient tracks
+- [ ] **Mobile Support**: Touch controls
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| **Backend** | Java | 11+ |
+| **Server Framework** | Eclipse Jetty | 9.4.51 |
+| **WebSocket** | Jetty WebSocket API | 9.4.51 |
+| **JSON** | Gson | 2.10.1 |
+| **Build Tool** | Maven | 3.x |
+| **Frontend** | HTML5 Canvas | - |
+| **JavaScript** | Vanilla ES6 | - |
+| **Voice** | WebRTC | - |
+| **Icons** | Font Awesome | 6.4.0 |
+
+## 📝 Development
+
+### Building
+```bash
+cd backend
+mvn clean compile
+```
+
+### Running Tests
+```bash
+mvn test
+```
+
+### Packaging
+```bash
+mvn package
+java -jar target/minitankfire-server-1.0-SNAPSHOT.jar
+```
+
+## 🐛 Troubleshooting
+
+### Server won't start
+- Check if port 8080 is available
+- Ensure Java 11+ is installed
+- Run `mvn clean compile` first
+
+### Frontend issues
+- Clear browser cache (Ctrl+F5)
+- Check console for errors (F12)
+- Verify server is running on port 8080
+
+### Voice chat not working
+- Grant microphone permissions
+- Check browser console for WebRTC errors
+- Ensure both players click voice icon
+
+## 📄 License
+
+This project is open source and available for educational purposes.
+
+## 👥 Credits
+
+Developed as a production-grade multiplayer game demonstration with:
+- Professional UI/UX design
+- Real-time WebSocket communication
+- WebRTC voice chat integration
+- Particle effects and animations
+- Industrial-level code organization
+
+---
+
+**Ready to deploy and scale!** 🚀

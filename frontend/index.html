@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Tank Fire: Online</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas" width="1200" height="800"></canvas>
+        
+        <!-- Join Screen -->
+        <div id="join-screen">
+            <div class="join-content">
+                <h1 class="game-title">
+                    <i class="fas fa-chess-rook"></i> 
+                    MINI TANK FIRE
+                </h1>
+                <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
+                <div class="join-form">
+                    <input type="text" id="player-name" placeholder="Enter your callsign" maxlength="20" autofocus>
+                    <button id="join-btn" class="btn-primary">
+                        <i class="fas fa-play"></i> Deploy to Battle
+                    </button>
+                </div>
+                <div class="game-info">
+                    <div class="info-item">
+                        <i class="fas fa-keyboard"></i>
+                        <span>WASD - Move</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <span>Mouse - Aim & Shoot</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Enter - Chat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Game HUD -->
+        <div id="game-hud" style="display: none;">
+            <!-- Top Bar -->
+            <div id="top-bar">
+                <div class="hud-section">
+                    <div id="player-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-heart"></i>
+                            <span id="health-text">100</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-crosshairs"></i>
+                            <span id="kills-text">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-skull"></i>
+                            <span id="deaths-text">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hud-section center">
+                    <div id="power-up-indicator"></div>
+                </div>
+                <div class="hud-section">
+                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button id="settings-btn" class="icon-btn" title="Settings">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div id="leaderboard" class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-trophy"></i> LEADERBOARD
+                </div>
+                <div id="scores" class="panel-content"></div>
+            </div>
+
+            <!-- Kill Feed -->
+            <div id="kill-feed"></div>
+
+            <!-- Chat System -->
+            <div id="chat-panel" class="panel">
+                <div class="panel-header">
+                    <i class="fas fa-comments"></i> TEAM CHAT
+                    <button id="chat-toggle" class="icon-btn-small">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+                <div id="chat-messages" class="panel-content"></div>
+                <div class="chat-input-wrapper">
+                    <input type="text" id="chat-input" placeholder="Press Enter to chat..." maxlength="100">
+                    <button id="send-btn" class="icon-btn-small">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Minimap -->
+            <div id="minimap-container" class="panel">
+                <div class="panel-header">MAP</div>
+                <canvas id="minimap" width="200" height="150"></canvas>
+            </div>
+
+            <!-- Respawn Overlay -->
+            <div id="respawn-overlay" style="display: none;">
+                <div class="respawn-content">
+                    <i class="fas fa-skull-crossbones"></i>
+                    <h2>ELIMINATED</h2>
+                    <p>Respawning in <span id="respawn-timer">3</span>s...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications -->
+        <div id="notifications"></div>
+    </div>
+
+    <script src="js/game.js"></script>
+</body>
+</html>
