@@ -135,6 +135,12 @@ class GameClient {
                 document.getElementById('join-btn').click();
             }
         });
+        
+        document.getElementById('server-address').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('player-name').focus();
+            }
+        });
     }
 
     async initVoiceChat() {
@@ -286,7 +292,8 @@ class GameClient {
 
     joinGame(name) {
         this.playerName = name;
-        this.ws = new WebSocket('ws://localhost:8080/game');
+        const serverAddress = document.getElementById('server-address').value.trim() || 'localhost';
+        this.ws = new WebSocket(`ws://${serverAddress}:8080/game`);
         
         this.ws.onopen = () => {
             this.sendMessage({ type: 'join', name: name });

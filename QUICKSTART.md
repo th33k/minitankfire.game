@@ -125,9 +125,11 @@ mvn exec:java
 3. Play against yourself!
 
 ### Different Computers (LAN)
-1. Find server IP: `ipconfig` (Windows) or `ifconfig` (Mac/Linux)
-2. On other computers, open `http://[SERVER_IP]:3000`
-3. All players connect to same server
+1. **On host computer:** Run `run.bat` to start the game
+2. **Find your LAN IP:** Open Command Prompt and run `ipconfig` - look for "IPv4 Address" (usually 192.168.x.x)
+3. **On other computers:** Open browser to `http://[YOUR_IP]:3000`
+4. **In the game:** Enter your LAN IP in the "Server address" field (instead of localhost)
+5. **Enter names and join!** All players will connect to the host's server
 
 ---
 
