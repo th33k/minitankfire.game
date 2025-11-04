@@ -2,29 +2,44 @@
 
 ## ⚡ 10-Second Setup (EASIEST)
 
-### Option 1: One-Click Launch
+### Option 1: One-Click Launch (Windows)
 ```cmd
-run.bat
+scripts\run.bat
 ```
 ✅ **Automatically starts both servers and opens browser!**
 
-### Option 2: Manual Setup
+### Option 2: One-Click Launch (Linux/Mac)
+```bash
+./scripts/run.sh
+```
+✅ **Automatically starts both servers and opens browser!**
 
-#### 1. Start Server
+### Option 3: Manual Setup
+
+#### 1. Build Server (Optional)
+```bash
+# Windows
+scripts\build.bat
+
+# Linux/Mac
+./scripts/build.sh
+```
+
+#### 2. Start Server
 ```bash
 cd server
 mvn exec:java
 ```
 ✅ Server running on `ws://localhost:8080`
 
-#### 2. Start Client
+#### 3. Start Client
 ```bash
 cd client
 python -m http.server 3000
 ```
 ✅ Game at `http://localhost:3000`
 
-#### 3. Play
+#### 4. Play
 - Open browser → `http://localhost:3000`
 - Enter name → Click "Deploy to Battle"
 - Use **WASD** to move, **mouse** to aim, **click** to fire
@@ -32,16 +47,14 @@ python -m http.server 3000
 ---
 
 ### 🛑 Stop the Game
-```cmd
-stop.bat
-```
-✅ **Stops all servers cleanly**
+- **Windows**: Close the command prompt window that was opened by `run.bat`
+- **Linux/Mac**: Press `Ctrl+C` in the terminal where `run.sh` is running
+- The servers will stop automatically when the script is terminated
 
 ### 📊 Check Server Status
-```cmd
-status.bat
-```
-✅ **Shows if servers are running**
+- **Server**: Check if port 8080 is listening: `netstat -an | find "8080"` (Windows) or `netstat -tlnp | grep 8080` (Linux)
+- **Client**: Check if port 3000 is listening: `netstat -an | find "3000"` (Windows) or `netstat -tlnp | grep 3000` (Linux)
+- Or simply try opening `http://localhost:3000` in your browser
 
 ---
 

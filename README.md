@@ -58,26 +58,47 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 
 ### Installation
 
+#### Option 1: One-Click Launch (Recommended)
+```bash
+# Windows
+scripts\run.bat
+
+# Linux/Mac
+./scripts/run.sh
+```
+✅ **Automatically starts both servers and opens browser!**
+
+#### Option 2: Manual Setup
+
 1. **Clone or navigate to the game directory**
    ```bash
    cd Game
    ```
 
-2. **Start the Server**
+2. **Build the Server (Optional)**
+   ```bash
+   # Windows
+   scripts\build.bat
+
+   # Linux/Mac
+   ./scripts/build.sh
+   ```
+
+3. **Start the Server**
    ```bash
    cd server
    mvn clean compile exec:java
    ```
    Server runs on `ws://localhost:8080/game`
 
-3. **Start the Client Server**
+4. **Start the Client Server**
    ```bash
    cd client
    python -m http.server 3000
    ```
    Open `http://localhost:3000` in your browser
 
-4. **Play!**
+5. **Play!**
    - Enter your callsign
    - Click "Deploy to Battle"
    - Use WASD to move, mouse to aim, click to fire
