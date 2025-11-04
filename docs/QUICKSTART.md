@@ -10,16 +10,16 @@ run.bat
 
 ### Option 2: Manual Setup
 
-#### 1. Start Backend
+#### 1. Start Server
 ```bash
-cd backend
+cd server
 mvn exec:java
 ```
 ✅ Server running on `ws://localhost:8080`
 
-#### 2. Start Frontend
+#### 2. Start Client
 ```bash
-cd frontend
+cd client
 python -m http.server 3000
 ```
 ✅ Game at `http://localhost:3000`
@@ -99,8 +99,8 @@ Voice:      Click 🎤 icon (top-right)
 
 ### Server won't start
 ```bash
-# Make sure you're in the backend folder
-cd Game/backend
+# Make sure you're in the server folder
+cd Game/server
 mvn clean compile
 mvn exec:java
 ```
@@ -136,13 +136,13 @@ mvn exec:java
 ## 🔧 Advanced
 
 ### Change Port
-**Backend:**
+**Server:**
 ```java
 // GameServer.java, line 10
 Server server = new Server(8080); // Change to your port
 ```
 
-**Frontend:**
+**Client:**
 ```javascript
 // game.js, line 309
 this.ws = new WebSocket('ws://localhost:8080/game'); // Update port
@@ -171,8 +171,8 @@ private static final int MAP_HEIGHT = 800;
 
 ## 📖 Full Documentation
 
-- **README.md** - Complete feature list, architecture
-- **GAMEPLAY.md** - Detailed tactics, strategies, tips
+- **[README.md](../README.md)** - Complete feature list, architecture
+- **[GAMEPLAY.md](GAMEPLAY.md)** - Detailed tactics, strategies, tips
 - **Code Comments** - Inline documentation in source files
 
 ---
@@ -180,7 +180,7 @@ private static final int MAP_HEIGHT = 800;
 ## 🎯 First Match Checklist
 
 - [ ] Server running (check terminal)
-- [ ] Frontend accessible (check browser)
+- [ ] Client accessible (check browser)
 - [ ] Entered callsign
 - [ ] Can move with WASD
 - [ ] Can aim with mouse

@@ -1,4 +1,4 @@
-name: Deploy frontend to GitHub Pages
+name: Deploy client to GitHub Pages
 
 on:
   push:
@@ -22,10 +22,10 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload frontend folder
+      - name: Upload client folder
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend
+          path: client
 
       - name: Deploy to GitHub Pages
         id: deployment

@@ -18,18 +18,18 @@ This guide covers deploying **Mini Tank Fire: Online** to production servers for
 
 ### Software
 - Maven 3.6+
-- Nginx (for frontend hosting)
+- Nginx (for client hosting)
 - SSL certificate (Let's Encrypt recommended)
 - Domain name (optional but recommended)
 
 ---
 
-## 🔧 Backend Deployment
+## 🔧 Server Deployment
 
 ### 1. Build Production JAR
 
 ```bash
-cd backend
+cd server
 mvn clean package
 ```
 
@@ -92,11 +92,11 @@ sudo ufw allow 443/tcp
 
 ---
 
-## 🌐 Frontend Deployment
+## 🌐 Client Deployment
 
 ### 1. Update WebSocket URL
 
-Edit `frontend/js/game.js` line 309:
+Edit `client/js/game.js` line 309:
 
 ```javascript
 // Change from
@@ -133,7 +133,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     
-    # Frontend static files
+    # Client static files
     root /var/www/minitankfire;
     index index.html;
     
@@ -169,12 +169,12 @@ server {
 }
 ```
 
-### 3. Deploy Frontend
+### 3. Deploy Client
 
 ```bash
 # Copy files
 sudo mkdir -p /var/www/minitankfire
-sudo cp -r frontend/* /var/www/minitankfire/
+sudo cp -r client/* /var/www/minitankfire/
 sudo chown -R www-data:www-data /var/www/minitankfire
 
 # Enable site
@@ -414,7 +414,7 @@ jobs:
           java-version: '11'
           
       - name: Build with Maven
-        run: cd backend && mvn clean package
+        run: cd server && mvn clean package
         
       - name: Deploy to server
         uses: appleboy/scp-action@master
@@ -422,7 +422,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: "backend/target/*.jar,frontend/*"
+          source: "server/target/*.jar,client/*"
           target: "/opt/minitankfire"
           
       - name: Restart service

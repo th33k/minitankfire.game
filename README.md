@@ -42,12 +42,18 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 - **Speed Indicators**: Visual effect for speed boost
 - **Tank Customization**: Different colors for self/enemies
 
-## 🚀 Quick Start
+## � Documentation
+
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Step-by-step setup and first match checklist
+- **[Gameplay Guide](docs/GAMEPLAY.md)** - Detailed tactics, strategies, and advanced gameplay
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production server setup and scaling
+
+## �🚀 Quick Start
 
 ### Prerequisites
-- **Java 11+** (for backend)
+- **Java 11+** (for server)
 - **Maven** (build tool)
-- **Python 3** (for serving frontend)
+- **Python 3** (for serving client)
 - **Modern Browser** (Chrome, Firefox, Edge)
 
 ### Installation
@@ -57,16 +63,16 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
    cd Game
    ```
 
-2. **Start the Backend Server**
+2. **Start the Server**
    ```bash
-   cd backend
+   cd server
    mvn clean compile exec:java
    ```
    Server runs on `ws://localhost:8080/game`
 
-3. **Start the Frontend Server**
+3. **Start the Client Server**
    ```bash
-   cd frontend
+   cd client
    python -m http.server 3000
    ```
    Open `http://localhost:3000` in your browser
@@ -90,9 +96,9 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 
 ## 🏗️ Architecture
 
-### Backend (Java)
+### Server (Java)
 ```
-backend/
+server/
 ├── pom.xml                      # Maven configuration
 └── src/main/java/com/minitankfire/
     ├── GameServer.java          # Jetty WebSocket server
@@ -110,9 +116,9 @@ backend/
 - **State Sync**: Broadcasts game state every frame
 - **Voice Signaling**: WebRTC offer/answer/ICE forwarding
 
-### Frontend (Web)
+### Client (Web)
 ```
-frontend/
+client/
 ├── index.html                   # Game UI structure
 ├── css/
 │   └── style.css               # Professional styling
@@ -232,12 +238,12 @@ this.canvas.height = 800;
 
 | Layer | Technology | Version |
 |-------|-----------|---------|
-| **Backend** | Java | 11+ |
+| **Server** | Java | 11+ |
 | **Server Framework** | Eclipse Jetty | 9.4.51 |
 | **WebSocket** | Jetty WebSocket API | 9.4.51 |
 | **JSON** | Gson | 2.10.1 |
 | **Build Tool** | Maven | 3.x |
-| **Frontend** | HTML5 Canvas | - |
+| **Client** | HTML5 Canvas | - |
 | **JavaScript** | Vanilla ES6 | - |
 | **Voice** | WebRTC | - |
 | **Icons** | Font Awesome | 6.4.0 |
@@ -246,7 +252,7 @@ this.canvas.height = 800;
 
 ### Building
 ```bash
-cd backend
+cd server
 mvn clean compile
 ```
 
@@ -268,7 +274,7 @@ java -jar target/minitankfire-server-1.0-SNAPSHOT.jar
 - Ensure Java 11+ is installed
 - Run `mvn clean compile` first
 
-### Frontend issues
+### Client issues
 - Clear browser cache (Ctrl+F5)
 - Check console for errors (F12)
 - Verify server is running on port 8080
