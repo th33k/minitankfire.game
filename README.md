@@ -1,52 +1,188 @@
-# 🎮 Mini Tank Fire: Online
+# 🎮 Tank Game: Pure Java Multiplayer Server
 
-A **production-grade** top-view multiplayer shooter game with professional UI/UX, voice chat, and real-time gameplay.
+A **web-based multiplayer tank game** with a **pure Java 21 server backend** demonstrating advanced networking concepts including TCP, UDP, and NIO for real-time multiplayer gameplay.
 
 ## ✨ Features
 
-### 🎯 Core Gameplay
-- **Real-time Multiplayer**: WebSocket-based synchronization at 20 FPS
-- **Smooth Tank Movement**: WASD controls with responsive aiming
-- **Combat System**: Click-to-fire with cooldown, collision detection
-- **Power-ups**: Shield, Speed Boost, Double Fire with visual effects
-- **Respawn Mechanics**: 3-second countdown with animated overlay
-
-### 🎨 Professional UI/UX
-- **Modern HUD**: Health, kills, deaths, power-up indicators
-- **Live Leaderboard**: Real-time top 10 rankings
-- **Kill Feed**: Kill notifications with fade-out animations
-- **Minimap**: Real-time tactical overview
-- **Responsive Design**: Clean, neon-themed interface
-- **Visual Effects**: Particle explosions, screen shake, glowing elements
-- **Smooth Animations**: CSS transitions, fade-ins, slide effects
-
-### 🎤 Voice Chat
-- **WebRTC P2P**: Peer-to-peer voice communication
-- **Push-to-Talk**: Toggle microphone on/off
-- **Auto Configuration**: Echo cancellation, noise suppression
-- **Visual Indicators**: Microphone status icon
-- **Low Latency**: Direct peer connections
-
-### 💬 Enhanced Chat System
-- **Text Chat**: Real-time messaging between players
-- **Keyboard Shortcuts**: Enter to open, ESC to close
-- **Message History**: Scrollable chat with 20-message limit
-- **Sender Highlighting**: Color-coded player names
-- **Collapsible Panel**: Toggle chat visibility
+### 🧠 Core Networking Concepts Demonstrated
+- **TCP Server**: Reliable data transfer for login, chat, and game setup
+- **UDP Server**: Fast real-time updates for player movement and actions
+- **NIO Server**: Non-blocking I/O for scalable client connections
+- **Multithreading**: Concurrent client handling with thread pools
+- **Game Loop**: Fixed tick rate (60 TPS) using ScheduledExecutorService
+- **Serialization**: Object serialization for game state transfer
+- **Broadcasting**: Real-time state updates to all connected players
 
 ### 🎯 Game Features
-- **Power-up System**: 3 types with rotating animations
-- **Health Bars**: Visual health indicators above tanks
-- **Shield Effects**: Glowing border around protected tanks
-- **Bullet Trails**: Visual feedback for projectiles
-- **Speed Indicators**: Visual effect for speed boost
-- **Tank Customization**: Different colors for self/enemies
+- **Real-time Multiplayer**: Multiple players in shared game world
+- **Tank Movement**: Smooth position updates and aiming
+- **Combat System**: Bullet firing with collision detection
+- **Power-ups**: Shield, Speed Boost, Double Fire
+- **Respawn Mechanics**: Automatic respawn after death
+- **Game State Management**: Centralized server-side game logic
 
-## � Documentation
+### �️ Architecture
+- **Pure Java 21**: No external frameworks or libraries
+- **Modular Design**: Separate packages for server, client, model, and utilities
+- **Thread Safety**: Concurrent collections and synchronized access
+- **Configurable**: Properties file for ports and game settings
+- **Logging**: Built-in logging utility for debugging and monitoring
 
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Step-by-step setup and first match checklist
-- **[Gameplay Guide](docs/GAMEPLAY.md)** - Detailed tactics, strategies, and advanced gameplay
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production server setup and scaling
+## 📁 Project Structure
+
+```
+tank-game/
+│
+├── server/src/main/
+│   ├── java/com/example/game/
+│   │   ├── server/           # Server implementations
+│   │   ├── client/           # Client implementations
+│   │   ├── model/            # Game data models
+│   │   └── util/             # Utilities
+│   └── resources/
+│       └── config.properties # Configuration
+│
+├── client/                   # Web frontend
+│   ├── index.html
+│   ├── css/style.css
+│   └── js/app.js
+│
+├── docs/                     # Documentation
+├── scripts/                  # Build and run scripts
+└── README.md
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Java 21** (required for server)
+- **Maven 3.6+** (build tool)
+- **Modern Browser** (for client)
+
+### Installation
+
+1. **Clone or navigate to the game directory**
+   ```bash
+   cd tank-game
+   ```
+
+2. **Build the Server**
+   ```bash
+   cd server
+   mvn clean compile
+   ```
+
+3. **Stop the Game**
+   ```bash
+   # Windows
+   scripts\stop.bat
+
+   # Linux/Mac
+   ./scripts/stop.sh
+   ```
+
+### Manual Setup
+
+**Start the Server**
+```bash
+cd server
+mvn exec:java
+```
+Server starts on TCP:8080, UDP:8081, NIO:8082
+
+**Start the Client Web Server**
+```bash
+cd client
+python -m http.server 3000
+```
+Open `http://localhost:3000` in your browser
+
+## 🧩 Networking Architecture
+
+### TCP Server (Port 8080)
+- **Purpose**: Reliable communication
+- **Use Cases**: Player login, chat messages, game setup
+- **Implementation**: ServerSocket with thread-per-client model
+
+### UDP Server (Port 8081)
+- **Purpose**: Fast real-time updates
+- **Use Cases**: Player movement, bullet positions, game actions
+- **Implementation**: DatagramSocket with connectionless packets
+
+### NIO Server (Port 8082)
+- **Purpose**: Scalable non-blocking I/O
+- **Use Cases**: High-concurrency scenarios
+- **Implementation**: Channels, Buffers, Selectors
+
+### Game Loop
+- **Tick Rate**: 60 updates per second
+- **Responsibilities**:
+  - Update game state
+  - Check collisions
+  - Broadcast updates
+  - Manage power-ups
+
+## 🛠️ Development
+
+### Building
+```bash
+cd server
+mvn clean compile
+```
+
+### Running
+```bash
+cd server
+mvn exec:java
+```
+
+### Testing
+```bash
+cd server
+mvn test
+```
+
+### Configuration
+Edit `server/src/main/resources/config.properties`:
+```properties
+tcp.port=8080
+udp.port=8081
+nio.port=8082
+game.tick.rate=60
+max.players=100
+```
+
+## 📚 Documentation
+
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Setup and first game
+- **[Gameplay Guide](docs/GAMEPLAY.md)** - Game mechanics and strategies
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
+
+## 🎯 Learning Objectives
+
+This project demonstrates:
+- **Core Java Networking**: TCP, UDP, NIO implementations
+- **Multithreading**: Thread pools, executors, synchronization
+- **Game Architecture**: Client-server model, game loops, state management
+- **Serialization**: Object transfer over networks
+- **Concurrent Programming**: Thread-safe data structures
+- **Real-time Systems**: Fixed update rates, broadcasting
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+---
+
+**Built with Pure Java 21 - No External Dependencies**
 
 ## �🚀 Quick Start
 

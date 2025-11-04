@@ -1,29 +1,31 @@
-package com.minitankfire;
+package com.example.game.model;
 
-public class PowerUp {
+/**
+ * Represents a power-up that players can collect.
+ */
+public class PowerUp extends GameObject {
+    private static final long serialVersionUID = 1L;
+
     public enum Type {
         SHIELD, SPEED_BOOST, DOUBLE_FIRE
     }
 
-    private String id;
     private Type type;
-    private int x, y;
     private long spawnTime;
 
     public PowerUp(String id, Type type, int x, int y) {
-        this.id = id;
+        super(id, x, y);
         this.type = type;
-        this.x = x;
-        this.y = y;
         this.spawnTime = System.currentTimeMillis();
     }
 
-    // Getters
-    public String getId() { return id; }
     public Type getType() { return type; }
-    public int getX() { return x; }
-    public int getY() { return y; }
     public long getSpawnTime() { return spawnTime; }
+
+    @Override
+    public void update() {
+        // Power-ups don't move, but could have animations
+    }
 
     public boolean isExpired() {
         return System.currentTimeMillis() - spawnTime > 10000; // 10 seconds

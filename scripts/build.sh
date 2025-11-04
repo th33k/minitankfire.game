@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "Building Mini Tank Fire Game..."
+echo "Building Tank Game Server..."
 
 # Build server
 cd server

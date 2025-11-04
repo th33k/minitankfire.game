@@ -1,5 +1,5 @@
 @echo off
-echo Building Mini Tank Fire Game...
+echo Building Tank Game Server...
 
 REM Build server
 cd server
