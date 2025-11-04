@@ -1,7 +1,12 @@
-package com.minitankfire;
+package com.minitankfire.game;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.minitankfire.model.Player;
+import com.minitankfire.model.Bullet;
+import com.minitankfire.model.PowerUp;
+import com.minitankfire.protocol.Message;
 
 public class GameRoom {
     private static final int MAP_WIDTH = 800;

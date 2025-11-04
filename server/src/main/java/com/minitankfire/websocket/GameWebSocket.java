@@ -1,9 +1,11 @@
-package com.minitankfire;
+package com.minitankfire.websocket;
 
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.annotations.*;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
+import com.minitankfire.game.GameRoom;
 
 @WebSocket
 public class GameWebSocket {

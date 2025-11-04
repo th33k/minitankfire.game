@@ -45,7 +45,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.minitankfire.GameServer</mainClass>
+                    <mainClass>com.minitankfire.server.GameServer</mainClass>
                 </configuration>
             </plugin>
         </plugins>

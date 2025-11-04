@@ -47,6 +47,7 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 - **[Quick Start Guide](docs/QUICKSTART.md)** - Step-by-step setup and first match checklist
 - **[Gameplay Guide](docs/GAMEPLAY.md)** - Detailed tactics, strategies, and advanced gameplay
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production server setup and scaling
+- **[Java Backend Documentation](docs/JAVA_BACKEND.md)** - Server architecture, components, and networking details
 
 ## �🚀 Quick Start
 

@@ -1,4 +1,4 @@
-package com.minitankfire;
+package com.minitankfire.model;
 
 public class Bullet {
     private String id;

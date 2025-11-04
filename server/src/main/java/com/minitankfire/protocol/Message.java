@@ -1,7 +1,11 @@
-package com.minitankfire;
+package com.minitankfire.protocol;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+
+import com.minitankfire.model.Player;
+import com.minitankfire.model.Bullet;
+import com.minitankfire.model.PowerUp;
 
 public class Message {
     private static final Gson gson = new Gson();

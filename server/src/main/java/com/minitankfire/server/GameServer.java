@@ -1,10 +1,12 @@
-package com.minitankfire;
+package com.minitankfire.server;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+
+import com.minitankfire.websocket.GameWebSocket;
 
 public class GameServer {
     public static void main(String[] args) throws Exception {
