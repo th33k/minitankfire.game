@@ -1,4 +1,4 @@
-# 🎮 Tank Game: Pure Java Multiplayer Server
+# 🎮 Mini Tank Fire: Pure Java Multiplayer Server
 
 A **web-based multiplayer tank game** with a **pure Java 21 server backend** demonstrating advanced networking concepts including TCP, UDP, and NIO for real-time multiplayer gameplay.
 
@@ -45,7 +45,7 @@ tank-game/
 ├── client/                   # Web frontend
 │   ├── index.html
 │   ├── css/style.css
-│   └── js/app.js
+│   └── js/game.js
 │
 ├── docs/                     # Documentation
 ├── scripts/                  # Build and run scripts
