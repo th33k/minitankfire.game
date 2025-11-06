@@ -4,13 +4,13 @@
 
 ### Option 1: One-Click Launch (Windows)
 ```cmd
-scripts\run.bat
+scripts\game.bat run
 ```
 ✅ **Automatically starts both servers and opens browser!**
 
 ### Option 2: One-Click Launch (Linux/Mac)
 ```bash
-./scripts/run.sh
+./scripts/game.sh run
 ```
 ✅ **Automatically starts both servers and opens browser!**
 
@@ -19,10 +19,10 @@ scripts\run.bat
 #### 1. Build Server (Optional)
 ```bash
 # Windows
-scripts\build.bat
+scripts\game.bat build
 
 # Linux/Mac
-./scripts/build.sh
+./scripts/game.sh build
 ```
 
 #### 2. Start Server
@@ -47,8 +47,8 @@ python -m http.server 3000
 ---
 
 ### 🛑 Stop the Game
-- **Windows**: Close the command prompt window that was opened by `run.bat`
-- **Linux/Mac**: Press `Ctrl+C` in the terminal where `run.sh` is running
+- **Windows**: Close the command prompt window that was opened by `game.bat run`
+- **Linux/Mac**: Press `Ctrl+C` in the terminal where `game.sh run` is running
 - The servers will stop automatically when the script is terminated
 
 ### 📊 Check Server Status
@@ -138,7 +138,7 @@ mvn exec:java
 3. Play against yourself!
 
 ### Different Computers (LAN)
-1. **On host computer:** Run `run.bat` to start the game
+1. **On host computer:** Run `game.bat run` (Windows) or `./game.sh run` (Linux/Mac) to start the game
 2. **Find your LAN IP:** Open Command Prompt and run `ipconfig` - look for "IPv4 Address" (usually 192.168.x.x)
 3. **On other computers:** Open browser to `http://[YOUR_IP]:3000`
 4. **In the game:** Enter your LAN IP in the "Server address" field (instead of localhost)

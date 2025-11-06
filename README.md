@@ -197,10 +197,10 @@ This project is open source and available under the MIT License.
 #### Option 1: One-Click Launch (Recommended)
 ```bash
 # Windows
-scripts\run.bat
+scripts\game.bat run
 
 # Linux/Mac
-./scripts/run.sh
+./scripts/game.sh run
 ```
 ✅ **Automatically starts both servers and opens browser!**
 
@@ -214,10 +214,10 @@ scripts\run.bat
 2. **Build the Server (Optional)**
    ```bash
    # Windows
-   scripts\build.bat
+   scripts\game.bat build
 
    # Linux/Mac
-   ./scripts/build.sh
+   ./scripts/game.sh build
    ```
 
 3. **Start the Server**
