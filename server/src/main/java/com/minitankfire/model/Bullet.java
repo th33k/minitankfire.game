@@ -1,5 +1,9 @@
-package com.minitankfire;
+package com.minitankfire.model;
 
+/**
+ * Bullet model representing a projectile fired by a player.
+ * Manages bullet position and movement.
+ */
 public class Bullet {
     private String id;
     private String ownerId;

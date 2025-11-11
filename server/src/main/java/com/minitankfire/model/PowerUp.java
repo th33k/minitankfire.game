@@ -1,5 +1,9 @@
-package com.minitankfire;
+package com.minitankfire.model;
 
+/**
+ * PowerUp model representing special items that can be collected by players.
+ * Types: SHIELD (protection), SPEED_BOOST (faster movement), DOUBLE_FIRE (dual shots).
+ */
 public class PowerUp {
     public enum Type {
         SHIELD, SPEED_BOOST, DOUBLE_FIRE

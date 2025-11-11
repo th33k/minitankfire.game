@@ -1,10 +1,28 @@
 # 🎮 Mini Tank Fire: Online
 
-A **production-grade** top-view multiplayer shooter game with professional UI/UX, voice chat, and real-time gameplay.
+A **pure Java network programming** implementation of a real-time multiplayer shooter game demonstrating core networking concepts for the IN 3111 - Network Programming module.
+
+---
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Documentation](#-documentation)
+- [Technology Stack](#-technology-stack)
+- [Architecture Overview](#-architecture-overview)
+- [Network Protocol](#-network-protocol)
+- [Game Controls](#-game-controls)
+- [Gameplay Tips](#-gameplay-tips)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
+
+---
 
 ## ✨ Features
 
 ### 🎯 Core Gameplay
+
 - **Real-time Multiplayer**: WebSocket-based synchronization at 20 FPS
 - **Smooth Tank Movement**: WASD controls with responsive aiming
 - **Combat System**: Click-to-fire with cooldown, collision detection
@@ -12,6 +30,7 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 - **Respawn Mechanics**: 3-second countdown with animated overlay
 
 ### 🎨 Professional UI/UX
+
 - **Modern HUD**: Health, kills, deaths, power-up indicators
 - **Live Leaderboard**: Real-time top 10 rankings
 - **Kill Feed**: Kill notifications with fade-out animations
@@ -21,6 +40,7 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 - **Smooth Animations**: CSS transitions, fade-ins, slide effects
 
 ### 🎤 Voice Chat
+
 - **WebRTC P2P**: Peer-to-peer voice communication
 - **Push-to-Talk**: Toggle microphone on/off
 - **Auto Configuration**: Echo cancellation, noise suppression
@@ -28,180 +48,166 @@ A **production-grade** top-view multiplayer shooter game with professional UI/UX
 - **Low Latency**: Direct peer connections
 
 ### 💬 Enhanced Chat System
+
 - **Text Chat**: Real-time messaging between players
 - **Keyboard Shortcuts**: Enter to open, ESC to close
 - **Message History**: Scrollable chat with 20-message limit
 - **Sender Highlighting**: Color-coded player names
 - **Collapsible Panel**: Toggle chat visibility
 
-### 🎯 Game Features
-- **Power-up System**: 3 types with rotating animations
-- **Health Bars**: Visual health indicators above tanks
-- **Shield Effects**: Glowing border around protected tanks
-- **Bullet Trails**: Visual feedback for projectiles
-- **Speed Indicators**: Visual effect for speed boost
-- **Tank Customization**: Different colors for self/enemies
+---
 
-## � Documentation
+## 🚀 Quick Start
 
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Step-by-step setup and first match checklist
-- **[Gameplay Guide](docs/GAMEPLAY.md)** - Detailed tactics, strategies, and advanced gameplay
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production server setup and scaling
+### Using Makefile (Recommended)
 
-## �🚀 Quick Start
-
-### Prerequisites
-- **Java 11+** (for server)
-- **Maven** (build tool)
-- **Python 3** (for serving client)
-- **Modern Browser** (Chrome, Firefox, Edge)
-
-### Installation
-
-#### Option 1: One-Click Launch (Recommended)
 ```bash
-# Windows
-scripts\run.bat
+# Build the project
+make build
 
-# Linux/Mac
-./scripts/run.sh
-```
-✅ **Automatically starts both servers and opens browser!**
+# Run both server and client
+make run
 
-#### Option 2: Manual Setup
+# Stop all servers
+make stop
 
-1. **Clone or navigate to the game directory**
-   ```bash
-   cd Game
-   ```
-
-2. **Build the Server (Optional)**
-   ```bash
-   # Windows
-   scripts\build.bat
-
-   # Linux/Mac
-   ./scripts/build.sh
-   ```
-
-3. **Start the Server**
-   ```bash
-   cd server
-   mvn clean compile exec:java
-   ```
-   Server runs on `ws://localhost:8080/game`
-
-4. **Start the Client Server**
-   ```bash
-   cd client
-   python -m http.server 3000
-   ```
-   Open `http://localhost:3000` in your browser
-
-5. **Play!**
-   - Enter your callsign
-   - Click "Deploy to Battle"
-   - Use WASD to move, mouse to aim, click to fire
-   - Press Enter to chat
-   - Click microphone icon for voice chat
-
-## 🎮 Controls
-
-| Action | Control |
-|--------|---------|
-| **Move** | W/A/S/D or Arrow Keys |
-| **Aim** | Mouse Movement |
-| **Fire** | Left Click or Spacebar |
-| **Chat** | Enter (type), Enter (send), ESC (close) |
-| **Voice** | Click microphone icon |
-
-## 🏗️ Architecture
-
-### Server (Java)
-```
-server/
-├── pom.xml                      # Maven configuration
-└── src/main/java/com/minitankfire/
-    ├── GameServer.java          # Jetty WebSocket server
-    ├── GameWebSocket.java       # Connection handler
-    ├── GameRoom.java            # Game logic & state
-    ├── Player.java              # Player entity
-    ├── Bullet.java              # Projectile entity
-    ├── PowerUp.java             # Power-up entity
-    └── Message.java             # Message protocols
+# Clean build artifacts
+make clean
 ```
 
-**Key Components:**
-- **Game Loop**: 50ms tick rate (20 FPS)
-- **Collision Detection**: AABB bounding boxes
-- **State Sync**: Broadcasts game state every frame
-- **Voice Signaling**: WebRTC offer/answer/ICE forwarding
+**For detailed Makefile reference, see [DEVELOPMENT.md](docs/DEVELOPMENT.md#makefile-reference)**
 
-### Client (Web)
-```
-client/
-├── index.html                   # Game UI structure
-├── css/
-│   └── style.css               # Professional styling
-└── js/
-    └── game.js                 # Game client logic
+### Manual Start
+
+### Manual Start
+
+**Start the Server**:
+```bash
+cd server
+mvn clean compile exec:java
 ```
 
-**Key Components:**
-- **Canvas Rendering**: 1200×800 game area
-- **WebSocket Client**: Real-time communication
-- **WebRTC Manager**: P2P voice connections
-- **Particle System**: Explosion effects
-- **HUD Manager**: Stats, leaderboard, chat
+**Start Client** (new terminal):
+```bash
+cd client
+python -m http.server 3000
+```
+
+**Open Browser**: `http://localhost:3000`
+
+---
+
+## 📋 Prerequisites
+
+| Requirement | Version | Purpose |
+|-------------|---------|---------|
+| Java | 11+ | Server runtime |
+| Maven | 3.8.0+ | Build tool |
+| Python | 3.6+ | Client server |
+| Browser | Modern | Game client |
+
+---
+
+## 📚 Documentation
+
+| Document | Purpose |
+|----------|---------|
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Original technical design |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | ✨ **Updated** - New package structure |
+| **[GAMEPLAY.md](docs/GAMEPLAY.md)** | Game guide & strategies |
+| **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** | Original dev setup |
+| **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** | ✨ **Updated** - Makefile reference & new structure |
+| **[SERVER_STRUCTURE.md](SERVER_STRUCTURE.md)** | Detailed server package guide |
+| **[RESTRUCTURING_SUMMARY.md](RESTRUCTURING_SUMMARY.md)** | Project restructuring overview |
+
+------
+
+## 🎮 Game Controls
+
+### Movement & Combat
+
+| Control | Action |
+|---------|--------|
+| **W/A/S/D** | Move tank (up/left/down/right) |
+| **Arrow Keys** | Alternative movement |
+| **Mouse Move** | Aim turret |
+| **Left Click** | Fire bullet |
+| **Spacebar** | Alternative fire |
+
+### Communication
+
+| Control | Action |
+|---------|--------|
+| **Enter** | Open chat input |
+| **Type & Enter** | Send message |
+| **Escape** | Close chat |
+| **Microphone Icon** | Toggle voice chat |
+
+👉 **[See GAMEPLAY.md for complete guide](docs/GAMEPLAY.md)**
+
+---
+
+## 🏗️ Architecture Overview
+
+### System Diagram
+
+```
+Browser Clients (WebSocket TCP 8080)
+            ↓
+         GameServer (Java)
+            ├─ GameRoom (Game Logic)
+            ├─ ClientHandler (Per-client)
+            └─ WebSocketHandler (RFC 6455)
+```
+
+### Server Components
+
+The server is organized into **5 focused packages**:
+
+```
+com/minitankfire/
+├── server/       🖥️ GameServer (bootstrap & lifecycle)
+├── network/      🌐 WebSocket protocol & client connections
+├── game/         🎮 GameRoom (game logic & physics)
+├── model/        📊 Player, Bullet, PowerUp entities
+└── util/         🔧 JsonUtil (serialization)
+```
+
+- **GameServer.java** - ServerSocket + Thread Pool
+- **ClientHandler.java** - Per-client thread (WebSocket handling)
+- **WebSocketHandler.java** - RFC 6455 protocol
+- **GameRoom.java** - Game logic & state
+- **Player.java, Bullet.java, PowerUp.java** - Game entities
+- **JsonUtil.java** - Custom JSON (no dependencies!)
+
+For detailed architecture, see **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**
+
+---
 
 ## 📡 Network Protocol
 
-### Message Types
+### Main Messages
 
-| Type | Direction | Description |
-|------|-----------|-------------|
-| `join` | Client → Server | Player joins with name |
-| `move` | Client → Server | Position & angle update |
-| `fire` | Client → Server | Fire weapon |
-| `chat` | Client ↔ Server | Text message |
-| `update` | Server → Client | Game state broadcast |
-| `hit` | Server → Client | Collision notification |
-| `respawn` | Server → Client | Player respawn |
-| `voice-offer` | Client ↔ Client | WebRTC offer (via server) |
-| `voice-answer` | Client ↔ Client | WebRTC answer (via server) |
-| `voice-ice` | Client ↔ Client | ICE candidate (via server) |
+| Type | Direction | Purpose |
+|------|-----------|---------|
+| `join` | C→S | Player joins |
+| `move` | C→S | Position update |
+| `fire` | C→S | Fire weapon |
+| `update` | S→C | Broadcast state |
+| `chat` | Both | Text messages |
 
-### Example Messages
+### Example
 
 ```json
-// Join
-{ "type": "join", "name": "Player1" }
-
-// Move
-{ "type": "move", "x": 400, "y": 300, "angle": 45 }
-
-// Fire
-{ "type": "fire" }
-
-// Update
-{
-  "type": "update",
-  "players": [{ "id": "...", "name": "...", "x": 400, "y": 300, ... }],
-  "bullets": [{ "id": "...", "x": 450, "y": 320, ... }],
-  "powerUps": [{ "id": "...", "type": "SHIELD", ... }]
-}
+{"type": "move", "x": 400, "y": 300, "angle": 45}
 ```
 
-## 🎨 Visual Design
+👉 **[See ARCHITECTURE.md for protocol details](docs/ARCHITECTURE.md#network-protocol)**
 
-### Color Palette
-- **Primary**: `#00ff88` (Neon Green)
-- **Secondary**: `#00ffcc` (Cyan)
-- **Accent**: `#ffaa00` (Gold)
-- **Danger**: `#ff4444` (Red)
-- **Background**: `#0a0a0a` - `#1a1a2e` (Dark gradient)
+---
 
 ### UI Elements
+
 - **Panels**: Semi-transparent black with neon borders
 - **Buttons**: Gradient fills with hover animations
 - **Text**: White with neon shadows
@@ -210,6 +216,7 @@ client/
 ## 🔧 Configuration
 
 ### Server Settings
+
 ```java
 // GameRoom.java
 private static final int MAP_WIDTH = 1200;
@@ -219,6 +226,7 @@ private static final int BULLET_SPEED = 8;
 ```
 
 ### Client Settings
+
 ```javascript
 // game.js
 this.fireRate = 500; // ms between shots
@@ -228,19 +236,19 @@ this.canvas.height = 800;
 
 ## 🎯 Power-ups
 
-| Type | Effect | Duration | Color |
-|------|--------|----------|-------|
-| **Shield** | Ignore next hit | 5 seconds | Cyan |
-| **Speed Boost** | +50% movement speed | 3 seconds | Yellow |
-| **Double Fire** | Fire 2 bullets | 10 seconds | Magenta |
+| Type            | Effect              | Duration   | Color   |
+| --------------- | ------------------- | ---------- | ------- |
+| **Shield**      | Ignore next hit     | 5 seconds  | Cyan    |
+| **Speed Boost** | +50% movement speed | 3 seconds  | Yellow  |
+| **Double Fire** | Fire 2 bullets      | 10 seconds | Magenta |
 
 ## 📊 Scoring System
 
-| Event | Points |
-|-------|--------|
-| Kill Enemy | +1 |
-| Death | −1 |
-| Collect Power-up | +0.5 |
+| Event            | Points |
+| ---------------- | ------ |
+| Kill Enemy       | +1     |
+| Death            | −1     |
+| Collect Power-up | +0.5   |
 
 ## 🔮 Future Enhancements
 
@@ -257,67 +265,126 @@ this.canvas.height = 800;
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Version |
-|-------|-----------|---------|
-| **Server** | Java | 11+ |
-| **Server Framework** | Eclipse Jetty | 9.4.51 |
-| **WebSocket** | Jetty WebSocket API | 9.4.51 |
-| **JSON** | Gson | 2.10.1 |
-| **Build Tool** | Maven | 3.x |
-| **Client** | HTML5 Canvas | - |
-| **JavaScript** | Vanilla ES6 | - |
-| **Voice** | WebRTC | - |
-| **Icons** | Font Awesome | 6.4.0 |
+| Layer          | Technology                         | Version  |
+| -------------- | ---------------------------------- | -------- |
+| **Server**     | Pure Java                          | 11+      |
+| **Networking** | java.net.ServerSocket              | Built-in |
+| **WebSocket**  | **Manual RFC 6455 Implementation** | ✅       |
+| **JSON**       | **Custom JsonUtil** (no Gson!)     | ✅       |
+| **Threading**  | java.util.concurrent               | Built-in |
+| **I/O**        | java.io Streams                    | Built-in |
+| **Build Tool** | Maven                              | 3.x      |
+| **Client**     | HTML5 Canvas                       | -        |
+| **JavaScript** | Vanilla ES6                        | -        |
+| **Voice**      | WebRTC                             | -        |
+| **Icons**      | Font Awesome                       | 6.4.0    |
+
+**🎯 Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
 
 ## 📝 Development
 
 ### Building
+
 ```bash
 cd server
 mvn clean compile
 ```
 
 ### Running Tests
+
 ```bash
 mvn test
 ```
 
 ### Packaging
+
 ```bash
 mvn package
 java -jar target/minitankfire-server-1.0-SNAPSHOT.jar
 ```
 
+---
+
 ## 🐛 Troubleshooting
 
-### Server won't start
+### Server Issues
 - Check if port 8080 is available
-- Ensure Java 11+ is installed
+- Ensure Java 11+ is installed  
 - Run `mvn clean compile` first
 
-### Client issues
+### Client Issues
 - Clear browser cache (Ctrl+F5)
 - Check console for errors (F12)
 - Verify server is running on port 8080
 
-### Voice chat not working
+### Voice Chat
 - Grant microphone permissions
 - Check browser console for WebRTC errors
 - Ensure both players click voice icon
 
-## 📄 License
-
-This project is open source and available for educational purposes.
-
-## 👥 Credits
-
-Developed as a production-grade multiplayer game demonstration with:
-- Professional UI/UX design
-- Real-time WebSocket communication
-- WebRTC voice chat integration
-- Particle effects and animations
-- Industrial-level code organization
+� **[See DEVELOPMENT.md for more](docs/DEVELOPMENT.md#common-issues)**
 
 ---
 
-**Ready to deploy and scale!** 🚀
+## 🤝 Contributing
+
+### Quick Start for Developers
+
+```bash
+git clone https://github.com/th33k/Tank-Game.git
+cd Tank-Game && git checkout dev
+cd server && mvn clean install
+make run
+```
+
+### Code Standards
+- ✅ Pure Java only
+- ✅ Follow style guidelines
+- ✅ Test locally first
+- ✅ Meaningful commit messages
+
+👉 **[See DEVELOPMENT.md for details](docs/DEVELOPMENT.md)**
+
+---
+
+## 📝 Project Structure
+
+```
+Tank-Game/
+├── README.md          ← Main documentation
+├── Makefile           ← Build automation
+├── client/            ← Frontend (HTML/CSS/JS)
+├── server/            ← Backend (Pure Java)
+└── docs/              ← Guides & references
+    ├── ARCHITECTURE.md
+    ├── GAMEPLAY.md
+    ├── DEVELOPMENT.md
+    └── DEPLOYMENT.md
+```
+
+---
+
+## 📄 License
+
+Open source for educational purposes.
+
+## 👥 Credits
+
+**Developed for**: IN 3111 - Network Programming Module
+
+**100% Pure Java** - No external frameworks, educational compliance guaranteed!
+
+---
+
+## 📞 Quick Links
+
+- 🎮 [Play Guide](docs/GAMEPLAY.md)
+- 💻 [Dev Setup](docs/DEVELOPMENT.md)  
+- 🏗️ [Architecture](docs/ARCHITECTURE.md)
+- 📚 [Concepts](docs/NETWORK_PROGRAMMING_CONCEPTS.md)
+
+---
+
+**Ready to play?** → `make run` → Open `http://localhost:3000`
+
+**Have fun!** 🚀
