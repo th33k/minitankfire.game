@@ -43,6 +43,33 @@ class GameClient {
         this.setupEventListeners();
         this.setupJoinScreen();
         this.initVoiceChat();
+        this.handleResize();
+    }
+
+    handleResize() {
+        // Handle window resize for responsive canvas
+        const resizeCanvas = () => {
+            const container = document.getElementById('game-container');
+            const rect = container.getBoundingClientRect();
+            
+            // Maintain aspect ratio
+            const aspectRatio = 1920 / 1080;
+            let width = rect.width;
+            let height = rect.height;
+            
+            if (width / height > aspectRatio) {
+                width = height * aspectRatio;
+            } else {
+                height = width / aspectRatio;
+            }
+            
+            // Update canvas size while maintaining logical size
+            this.canvas.style.width = width + 'px';
+            this.canvas.style.height = height + 'px';
+        };
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
     }
 
     setupEventListeners() {
@@ -72,11 +99,16 @@ class GameClient {
             this.keys[e.code] = false;
         });
 
-        // Mouse
-        this.canvas.addEventListener('mousemove', (e) => {
+        // Mouse - track globally for turret aiming
+        document.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
+            
+            // Scale mouse coordinates from display space to logical canvas space (1920x1080)
+            const scaleX = 1920 / rect.width;
+            const scaleY = 1080 / rect.height;
+            
+            this.mouseX = (e.clientX - rect.left) * scaleX;
+            this.mouseY = (e.clientY - rect.top) * scaleY;
             
             if (this.myPlayer) {
                 this.angle = Math.atan2(
@@ -121,30 +153,39 @@ class GameClient {
     }
 
     setupJoinScreen() {
-        document.getElementById('join-btn').addEventListener('click', () => {
-            const name = document.getElementById('player-name').value.trim();
+        const joinBtn = document.getElementById('join-btn');
+        const playerNameInput = document.getElementById('player-name');
+        
+        joinBtn.addEventListener('click', () => {
+            const name = playerNameInput.value.trim();
             if (name) {
+                // Add visual feedback
+                joinBtn.classList.add('loading');
+                joinBtn.disabled = true;
+                joinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
                 this.joinGame(name);
             } else {
                 this.showNotification('Please enter a callsign!', 'error');
+                playerNameInput.focus();
             }
         });
         
-        document.getElementById('player-name').addEventListener('keypress', (e) => {
+        playerNameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                document.getElementById('join-btn').click();
+                joinBtn.click();
             }
         });
         
         document.getElementById('server-address').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                document.getElementById('player-name').focus();
+                playerNameInput.focus();
             }
         });
     }
 
     async initVoiceChat() {
         try {
+            console.log('Requesting microphone access...');
             this.localStream = await navigator.mediaDevices.getUserMedia({ 
                 audio: {
                     echoCancellation: true,
@@ -154,8 +195,18 @@ class GameClient {
             });
             // Mute by default
             this.localStream.getAudioTracks().forEach(track => track.enabled = false);
+            console.log('Microphone access granted');
+            this.showNotification('Microphone ready - Click mic button to enable', 'success');
         } catch (err) {
             console.log('Microphone access denied:', err);
+            this.showNotification('Microphone not available - voice chat disabled', 'error');
+            // Disable voice button if no mic
+            const voiceBtn = document.getElementById('voice-toggle');
+            if (voiceBtn) {
+                voiceBtn.disabled = true;
+                voiceBtn.style.opacity = '0.5';
+                voiceBtn.title = 'Microphone not available';
+            }
         }
     }
 
@@ -174,13 +225,21 @@ class GameClient {
         
         if (this.voiceEnabled) {
             btn.classList.add('active');
-            btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
-            this.showNotification('Voice chat enabled', 'success');
+            btn.innerHTML = '<i class="fas fa-microphone"></i>';
+            btn.title = 'Voice chat enabled - Click to mute';
+            this.showNotification('Voice chat enabled - connecting to players...', 'success');
             this.broadcastVoiceOffer();
         } else {
             btn.classList.remove('active');
-            btn.innerHTML = '<i class="fas fa-microphone"></i>';
+            btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            btn.title = 'Voice chat muted - Click to enable';
             this.showNotification('Voice chat muted', 'info');
+            
+            // Close all peer connections
+            for (const playerId in this.peerConnections) {
+                this.peerConnections[playerId].close();
+            }
+            this.peerConnections = {};
         }
     }
 
@@ -194,109 +253,215 @@ class GameClient {
     }
 
     async createPeerConnection(remotePlayerId) {
-        const pc = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
+        console.log('Creating peer connection to:', remotePlayerId);
         
-        this.peerConnections[remotePlayerId] = pc;
-        
-        // Add local stream
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream);
+        try {
+            const pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
             });
-        }
-        
-        // Handle remote stream
-        pc.ontrack = (event) => {
-            const audio = new Audio();
-            audio.srcObject = event.streams[0];
-            audio.play();
-        };
-        
-        // Handle ICE candidates
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.sendMessage({
-                    type: 'voice-ice',
-                    target: remotePlayerId,
-                    candidate: event.candidate
+            
+            this.peerConnections[remotePlayerId] = pc;
+            
+            // Add local stream
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, this.localStream);
                 });
             }
-        };
-        
-        // Create and send offer
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        
-        this.sendMessage({
-            type: 'voice-offer',
-            target: remotePlayerId,
-            offer: offer
-        });
+            
+            // Handle remote stream
+            pc.ontrack = (event) => {
+                console.log('Received remote track from:', remotePlayerId);
+                const audio = new Audio();
+                audio.srcObject = event.streams[0];
+                audio.play().catch(e => console.log('Audio autoplay blocked:', e));
+            };
+            
+            // Handle ICE candidates
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    // Send VOICE_ICE message: VOICE_ICE|fromId|targetId|candidateJson
+                    this.sendMessage('VOICE_ICE|' + this.playerId + '|' + remotePlayerId + '|' + JSON.stringify(event.candidate));
+                }
+            };
+            
+            pc.oniceconnectionstatechange = () => {
+                console.log('ICE connection state with', remotePlayerId, ':', pc.iceConnectionState);
+                if (pc.iceConnectionState === 'connected') {
+                    this.showNotification(`Voice connected to ${this.players[remotePlayerId]?.name || 'player'}`, 'success');
+                } else if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
+                    this.showNotification(`Voice disconnected from ${this.players[remotePlayerId]?.name || 'player'}`, 'error');
+                }
+            };
+            
+            // Create and send offer
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            
+            // Send VOICE_OFFER message: VOICE_OFFER|fromId|targetId|offerJson
+            this.sendMessage('VOICE_OFFER|' + this.playerId + '|' + remotePlayerId + '|' + JSON.stringify(offer));
+            console.log('Sent voice offer to:', remotePlayerId);
+        } catch (err) {
+            console.error('Error creating peer connection:', err);
+        }
     }
 
     async handleVoiceOffer(data) {
-        const pc = new RTCPeerConnection({
-            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
+        console.log('Received voice offer from:', data.from);
         
-        this.peerConnections[data.from] = pc;
-        
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                pc.addTrack(track, this.localStream);
+        try {
+            const pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
             });
-        }
-        
-        pc.ontrack = (event) => {
-            const audio = new Audio();
-            audio.srcObject = event.streams[0];
-            audio.play();
-        };
-        
-        pc.onicecandidate = (event) => {
-            if (event.candidate) {
-                this.sendMessage({
-                    type: 'voice-ice',
-                    target: data.from,
-                    candidate: event.candidate
+            
+            this.peerConnections[data.from] = pc;
+            
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, this.localStream);
                 });
             }
-        };
-        
-        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-        const answer = await pc.createAnswer();
-        await pc.setLocalDescription(answer);
-        
-        this.sendMessage({
-            type: 'voice-answer',
-            target: data.from,
-            answer: answer
-        });
+            
+            pc.ontrack = (event) => {
+                console.log('Received remote track from:', data.from);
+                const audio = new Audio();
+                audio.srcObject = event.streams[0];
+                audio.play().catch(e => console.log('Audio autoplay blocked:', e));
+            };
+            
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    // Send VOICE_ICE message: VOICE_ICE|fromId|targetId|candidateJson
+                    this.sendMessage('VOICE_ICE|' + this.playerId + '|' + data.from + '|' + JSON.stringify(event.candidate));
+                }
+            };
+            
+            pc.oniceconnectionstatechange = () => {
+                console.log('ICE connection state with', data.from, ':', pc.iceConnectionState);
+            };
+            
+            const offer = JSON.parse(data.offer);
+            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            
+            // Send VOICE_ANSWER message: VOICE_ANSWER|fromId|targetId|answerJson
+            this.sendMessage('VOICE_ANSWER|' + this.playerId + '|' + data.from + '|' + JSON.stringify(answer));
+            console.log('Sent voice answer to:', data.from);
+        } catch (err) {
+            console.error('Error in handleVoiceOffer:', err);
+        }
     }
 
     async handleVoiceAnswer(data) {
-        const pc = this.peerConnections[data.from];
-        if (pc) {
-            await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+        console.log('Received voice answer from:', data.from);
+        
+        try {
+            const pc = this.peerConnections[data.from];
+            if (pc) {
+                await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                console.log('Voice answer processed for:', data.from);
+            } else {
+                console.error('No peer connection found for:', data.from);
+            }
+        } catch (err) {
+            console.error('Error in handleVoiceAnswer:', err);
         }
     }
 
     async handleVoiceIce(data) {
-        const pc = this.peerConnections[data.from];
-        if (pc) {
-            await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+        console.log('Received ICE candidate from:', data.from);
+        
+        try {
+            const pc = this.peerConnections[data.from];
+            if (pc && data.candidate) {
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                console.log('ICE candidate added for:', data.from);
+            }
+        } catch (err) {
+            console.error('Error in handleVoiceIce:', err);
+        }
+    }
+
+    // Text protocol voice message handlers
+    async handleVoiceOfferText(parts) {
+        // VOICE_OFFER|fromId|targetId|offerJson
+        if (parts.length >= 4 && parts[2] === this.playerId) {
+            try {
+                // Reconstruct JSON in case it contained | characters
+                const offerJson = parts.slice(3).join('|');
+                const data = {
+                    from: parts[1],
+                    offer: offerJson
+                };
+                await this.handleVoiceOffer(data);
+            } catch (err) {
+                console.error('Error handling voice offer:', err);
+            }
+        }
+    }
+
+    async handleVoiceAnswerText(parts) {
+        // VOICE_ANSWER|fromId|targetId|answerJson
+        if (parts.length >= 4 && parts[2] === this.playerId) {
+            try {
+                // Reconstruct JSON in case it contained | characters
+                const answerJson = parts.slice(3).join('|');
+                const data = {
+                    from: parts[1],
+                    answer: JSON.parse(answerJson)
+                };
+                await this.handleVoiceAnswer(data);
+            } catch (err) {
+                console.error('Error handling voice answer:', err);
+            }
+        }
+    }
+
+    async handleVoiceIceText(parts) {
+        // VOICE_ICE|fromId|targetId|candidateJson
+        if (parts.length >= 4 && parts[2] === this.playerId) {
+            try {
+                // Reconstruct JSON in case it contained | characters
+                const candidateJson = parts.slice(3).join('|');
+                const data = {
+                    from: parts[1],
+                    candidate: JSON.parse(candidateJson)
+                };
+                await this.handleVoiceIce(data);
+            } catch (err) {
+                console.error('Error handling voice ICE:', err);
+            }
         }
     }
 
     joinGame(name) {
         this.playerName = name;
-        const serverAddress = document.getElementById('server-address').value.trim() || 'localhost';
-        this.ws = new WebSocket(`ws://${serverAddress}:8080/game`);
+        const serverInput = document.getElementById('server-address').value.trim() || 'localhost';
+        
+        // Parse server:port format, default to 8080 if no port specified
+        let serverAddress = 'localhost';
+        let port = 8080;
+        
+        if (serverInput.includes(':')) {
+            const parts = serverInput.split(':');
+            serverAddress = parts[0];
+            port = parseInt(parts[1]) || 8080;
+        } else {
+            serverAddress = serverInput;
+        }
+        
+        this.ws = new WebSocket(`ws://${serverAddress}:${port}/game`);
         
         this.ws.onopen = () => {
-            this.sendMessage({ type: 'join', name: name });
+            // Send JOIN message in text protocol format: JOIN|playerName
+            this.ws.send('JOIN|' + name);
             document.getElementById('join-screen').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
             this.showNotification(`Welcome, ${name}!`, 'success');
@@ -304,7 +469,7 @@ class GameClient {
         };
         
         this.ws.onmessage = (event) => {
-            this.handleMessage(JSON.parse(event.data));
+            this.handleMessage(event.data);
         };
         
         this.ws.onclose = () => {
@@ -320,75 +485,216 @@ class GameClient {
 
     sendMessage(msg) {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify(msg));
+            this.ws.send(msg);
         }
     }
 
-    handleMessage(msg) {
-        switch (msg.type) {
-            case 'update':
-                this.players = {};
-                msg.players.forEach(p => {
-                    this.players[p.id] = p;
-                    if (p.id === this.playerId || (!this.playerId && p.name === this.playerName)) {
-                        this.playerId = p.id;
-                        this.myPlayer = p;
-                        this.health = p.alive ? 100 : 0;
-                        this.isAlive = p.alive;
-                    }
-                });
-                
-                this.bullets = {};
-                msg.bullets.forEach(b => this.bullets[b.id] = b);
-                
-                this.powerUps = {};
-                msg.powerUps.forEach(pu => this.powerUps[pu.id] = pu);
-                
-                this.updateHUD();
+    handleMessage(data) {
+        // Parse text protocol: TYPE|field1|field2|...
+        const parts = data.split('|');
+        const msgType = parts[0];
+        
+        switch (msgType) {
+            case 'UPDATE':
+                this.handleUpdate(parts);
                 break;
                 
-            case 'chat':
-                this.addChatMessage(msg.msg);
+            case 'HIT':
+                this.handleHit(parts);
                 break;
                 
-            case 'respawn':
-                if (msg.playerId === this.playerId) {
-                    this.isAlive = true;
-                    this.health = 100;
-                    document.getElementById('respawn-overlay').style.display = 'none';
-                }
+            case 'KILL':
+                this.handleKill(parts);
                 break;
                 
-            case 'hit':
-                if (msg.target === this.playerId) {
-                    this.health -= 100;
-                    this.deaths++;
-                    this.showRespawnScreen();
-                    this.createExplosion(this.myPlayer.x, this.myPlayer.y, 30, '#ff0000');
-                }
-                if (msg.shooter === this.playerId) {
-                    this.kills++;
-                    this.showNotification('+1 KILL', 'success');
-                }
-                this.addKillFeed(msg.shooter, msg.target);
+            case 'RESPAWN':
+                this.handleRespawn(parts);
                 break;
                 
-            case 'voice-offer':
-                this.handleVoiceOffer(msg);
+            case 'POWERUP_COLLECT':
+                this.handlePowerUpCollect(parts);
                 break;
-            case 'voice-answer':
-                this.handleVoiceAnswer(msg);
+                
+            case 'CHAT':
+                this.handleChat(parts);
                 break;
-            case 'voice-ice':
-                this.handleVoiceIce(msg);
+                
+            case 'VOICE_OFFER':
+                this.handleVoiceOfferText(parts);
+                break;
+                
+            case 'VOICE_ANSWER':
+                this.handleVoiceAnswerText(parts);
+                break;
+                
+            case 'VOICE_ICE':
+                this.handleVoiceIceText(parts);
                 break;
         }
+    }
+    
+    handleUpdate(parts) {
+        // Parse UPDATE message: UPDATE|tanksData|bulletsData|powerUpsData
+        const tanksData = parts[1] || '';
+        const bulletsData = parts[2] || '';
+        const powerUpsData = parts[3] || '';
+        
+        // Track previous players to detect new ones
+        const previousPlayers = Object.keys(this.players);
+        
+        // Parse tanks: id:name:x:y:angle:health:kills:deaths:alive:shield:speed:double;...
+        this.players = {};
+        if (tanksData) {
+            tanksData.split(';').forEach(tankStr => {
+                if (!tankStr) return;
+                const fields = tankStr.split(':');
+                const tank = {
+                    id: fields[0],
+                    name: fields[1],
+                    x: parseInt(fields[2]),
+                    y: parseInt(fields[3]),
+                    angle: parseInt(fields[4]),
+                    health: parseInt(fields[5]),
+                    kills: parseInt(fields[6]),
+                    deaths: parseInt(fields[7]),
+                    alive: fields[8] === '1',
+                    shield: fields[9] === '1',
+                    speedBoost: fields[10] === '1',
+                    doubleFire: fields[11] === '1'
+                };
+                this.players[tank.id] = tank;
+                
+                if (tank.id === this.playerId || (!this.playerId && tank.name === this.playerName)) {
+                    this.playerId = tank.id;
+                    this.myPlayer = tank;
+                    if (this.health >= 25 && tank.health < 25) {
+                        this.showNotification("Low Health!", "error");
+                    }
+                    this.health = tank.health;
+                    this.isAlive = tank.alive;
+                    this.kills = tank.kills;
+                    this.deaths = tank.deaths;
+                }
+            });
+        }
+        
+        // Check for new players and create voice connections if enabled
+        if (this.voiceEnabled && this.playerId) {
+            for (const playerId in this.players) {
+                if (playerId !== this.playerId && 
+                    !previousPlayers.includes(playerId) && 
+                    !this.peerConnections[playerId]) {
+                    console.log('New player detected, creating voice connection:', playerId);
+                    this.createPeerConnection(playerId);
+                }
+            }
+        }
+        
+        // Parse bullets: id:ownerId:x:y:vx:vy;...
+        this.bullets = {};
+        if (bulletsData) {
+            bulletsData.split(';').forEach(bulletStr => {
+                if (!bulletStr) return;
+                const fields = bulletStr.split(':');
+                const bullet = {
+                    id: fields[0],
+                    ownerId: fields[1],
+                    x: parseInt(fields[2]),
+                    y: parseInt(fields[3]),
+                    dx: parseInt(fields[4]),
+                    dy: parseInt(fields[5])
+                };
+                this.bullets[bullet.id] = bullet;
+            });
+        }
+        
+        // Parse power-ups: id:type:x:y;...
+        this.powerUps = {};
+        if (powerUpsData) {
+            powerUpsData.split(';').forEach(puStr => {
+                if (!puStr) return;
+                const fields = puStr.split(':');
+                const powerUp = {
+                    id: fields[0],
+                    type: parseInt(fields[1]),
+                    x: parseInt(fields[2]),
+                    y: parseInt(fields[3])
+                };
+                this.powerUps[powerUp.id] = powerUp;
+            });
+        }
+        
+        this.updateHUD();
+    }
+    
+    handleHit(parts) {
+        // HIT|targetId|shooterId|damage
+        const targetId = parts[1];
+        const shooterId = parts[2];
+        const damage = parseInt(parts[3] || 20);
+        
+        if (targetId === this.playerId) {
+            this.health -= damage;
+            if (this.health <= 0) {
+                this.deaths++;
+                this.showRespawnScreen();
+                this.createExplosion(this.myPlayer.x, this.myPlayer.y, 30, '#ff0000');
+            }
+            this.showNotification('You were hit!', 'damage');
+        }
+    }
+    
+    handleKill(parts) {
+        // KILL|killerId|victimId
+        const killerId = parts[1];
+        const victimId = parts[2];
+        
+        const killer = this.players[killerId];
+        const victim = this.players[victimId];
+        
+        if (killer && victim) {
+            this.addKillFeed(killer.name, victim.name);
+        }
+        
+        if (victimId === this.playerId) {
+            this.showNotification('You were killed!', 'error');
+            this.isAlive = false;
+        } else if (killerId === this.playerId) {
+            this.showNotification('Kill!', 'success');
+        }
+    }
+    
+    handleRespawn(parts) {
+        // RESPAWN|tankId|x|y
+        const tankId = parts[1];
+        if (tankId === this.playerId) {
+            this.showNotification('Respawned!', 'success');
+            this.isAlive = true;
+        }
+    }
+    
+    handlePowerUpCollect(parts) {
+        // POWERUP_COLLECT|powerUpId|tankId|type
+        const tankId = parts[2];
+        const type = parseInt(parts[3]);
+        
+        if (tankId === this.playerId) {
+            const typeName = ['Shield', 'Speed Boost', 'Double Fire'][type];
+            this.showNotification(`Collected ${typeName}!`, 'success');
+        }
+    }
+    
+    handleChat(parts) {
+        // CHAT|message
+        const message = parts[1] || '';
+        this.addChatMessage(message);
     }
 
     tryFire() {
         const now = Date.now();
         if (now - this.lastFireTime >= this.fireRate && this.isAlive) {
-            this.sendMessage({ type: 'fire' });
+            // Send FIRE message: FIRE|angle
+            this.sendMessage('FIRE|' + Math.round(this.angle));
             this.lastFireTime = now;
             this.screenShake();
         }
@@ -399,7 +705,7 @@ class GameClient {
         
         let x = this.myPlayer.x;
         let y = this.myPlayer.y;
-        const speed = this.myPlayer.speedBoost ? 5 : 3;
+        const speed = this.myPlayer.speedBoost ? 15 : 10;
 
         if (this.keys['KeyW'] || this.keys['ArrowUp']) y -= speed;
         if (this.keys['KeyS'] || this.keys['ArrowDown']) y += speed;
@@ -410,12 +716,8 @@ class GameClient {
         y = Math.max(15, Math.min(785, y));
 
         if (x !== this.myPlayer.x || y !== this.myPlayer.y || this.angle !== this.myPlayer.angle) {
-            this.sendMessage({ 
-                type: 'move', 
-                x: Math.round(x), 
-                y: Math.round(y), 
-                angle: Math.round(this.angle) 
-            });
+            // Send MOVE message: MOVE|x|y|angle
+            this.sendMessage('MOVE|' + Math.round(x) + '|' + Math.round(y) + '|' + Math.round(this.angle));
         }
         
         // Auto-fire on space
@@ -428,7 +730,8 @@ class GameClient {
         const input = document.getElementById('chat-input');
         const msg = input.value.trim();
         if (msg) {
-            this.sendMessage({ type: 'chat', msg: msg });
+            // Send CHAT message: CHAT|message
+            this.sendMessage('CHAT|' + msg);
             input.value = '';
         }
     }
@@ -498,8 +801,20 @@ class GameClient {
     }
 
     updateHUD() {
-        // Update stats
-        document.getElementById('health-text').textContent = this.health;
+        // Update stats with color coding
+        const healthText = document.getElementById('health-text');
+        healthText.textContent = this.health;
+        
+        // Add health color classes
+        healthText.classList.remove('health-critical', 'health-warning', 'health-good');
+        if (this.health < 25) {
+            healthText.classList.add('health-critical');
+        } else if (this.health < 50) {
+            healthText.classList.add('health-warning');
+        } else {
+            healthText.classList.add('health-good');
+        }
+        
         document.getElementById('kills-text').textContent = this.kills;
         document.getElementById('deaths-text').textContent = this.deaths;
         
@@ -588,21 +903,21 @@ class GameClient {
 
     render() {
         const ctx = this.ctx;
-        ctx.clearRect(0, 0, 1200, 800);
+        ctx.clearRect(0, 0, 1920, 1080);
 
         // Background grid
         ctx.strokeStyle = 'rgba(0, 255, 136, 0.1)';
         ctx.lineWidth = 1;
-        for (let x = 0; x <= 1200; x += 50) {
+        for (let x = 0; x <= 1920; x += 50) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
-            ctx.lineTo(x, 800);
+            ctx.lineTo(x, 1080);
             ctx.stroke();
         }
-        for (let y = 0; y <= 800; y += 50) {
+        for (let y = 0; y <= 1080; y += 50) {
             ctx.beginPath();
             ctx.moveTo(0, y);
-            ctx.lineTo(1200, y);
+            ctx.lineTo(1920, y);
             ctx.stroke();
         }
 
@@ -696,7 +1011,14 @@ class GameClient {
             ctx.textAlign = 'center';
             ctx.shadowBlur = 3;
             ctx.shadowColor = '#000000';
-            ctx.fillText(p.name, p.x, p.y - 35);
+            
+            // Voice indicator - show mic icon if peer connection exists
+            let nameText = p.name;
+            if (this.peerConnections[p.id] && this.peerConnections[p.id].iceConnectionState === 'connected') {
+                nameText = '🎤 ' + p.name;
+            }
+            
+            ctx.fillText(nameText, p.x, p.y - 35);
             ctx.shadowBlur = 0;
             
             // Speed boost indicator
@@ -740,8 +1062,8 @@ class GameClient {
         Object.values(this.players).forEach(p => {
             if (!p.alive) return;
             
-            const mx = (p.x / 1200) * 200;
-            const my = (p.y / 800) * 150;
+            const mx = (p.x / 1920) * 200;
+            const my = (p.y / 1080) * 150;
             
             ctx.fillStyle = p.id === this.playerId ? '#00ff88' : '#ff4444';
             ctx.beginPath();

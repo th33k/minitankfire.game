@@ -9,7 +9,7 @@
 </head>
 <body>
     <div id="game-container">
-        <canvas id="game-canvas" width="1200" height="800"></canvas>
+        <canvas id="game-canvas" width="1920" height="1080"></canvas>
         
         <!-- Join Screen -->
         <div id="join-screen">
@@ -20,7 +20,7 @@
                 </h1>
                 <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
                 <div class="join-form">
-                    <input type="text" id="server-address" placeholder="Server address (e.g., 192.168.1.100)" value="localhost">
+                    <input type="text" id="server-address" placeholder="Server address:port (e.g., 192.168.1.100:9090)" value="localhost">
                     <input type="text" id="player-name" placeholder="Enter your callsign" maxlength="20" autofocus>
                     <button id="join-btn" class="btn-primary">
                         <i class="fas fa-play"></i> Deploy to Battle
@@ -49,15 +49,15 @@
             <div id="top-bar">
                 <div class="hud-section">
                     <div id="player-stats">
-                        <div class="stat-item">
+                        <div class="stat-item" data-tooltip="Your current health">
                             <i class="fas fa-heart"></i>
                             <span id="health-text">100</span>
                         </div>
-                        <div class="stat-item">
+                        <div class="stat-item" data-tooltip="Total eliminations">
                             <i class="fas fa-crosshairs"></i>
                             <span id="kills-text">0</span>
                         </div>
-                        <div class="stat-item">
+                        <div class="stat-item" data-tooltip="Times eliminated">
                             <i class="fas fa-skull"></i>
                             <span id="deaths-text">0</span>
                         </div>
@@ -67,10 +67,10 @@
                     <div id="power-up-indicator"></div>
                 </div>
                 <div class="hud-section">
-                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat">
+                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat" data-tooltip="Voice Chat (V)">
                         <i class="fas fa-microphone"></i>
                     </button>
-                    <button id="settings-btn" class="icon-btn" title="Settings">
+                    <button id="settings-btn" class="icon-btn" title="Settings" data-tooltip="Game Settings">
                         <i class="fas fa-cog"></i>
                     </button>
                 </div>
