@@ -9,15 +9,21 @@ public class Bullet {
     private String ownerId;
     private int x, y;
     private int dx, dy;
+    private int damage;
     private long creationTime;
 
     public Bullet(String id, String ownerId, int x, int y, int dx, int dy) {
+        this(id, ownerId, x, y, dx, dy, 25); // Default damage
+    }
+
+    public Bullet(String id, String ownerId, int x, int y, int dx, int dy, int damage) {
         this.id = id;
         this.ownerId = ownerId;
         this.x = x;
         this.y = y;
         this.dx = dx;
         this.dy = dy;
+        this.damage = damage;
         this.creationTime = System.currentTimeMillis();
     }
 
@@ -30,6 +36,8 @@ public class Bullet {
     public void setY(int y) { this.y = y; }
     public int getDx() { return dx; }
     public int getDy() { return dy; }
+    public int getDamage() { return damage; }
+    public void setDamage(int damage) { this.damage = damage; }
     public long getCreationTime() { return creationTime; }
 
     public void updatePosition() {
@@ -38,6 +46,6 @@ public class Bullet {
     }
 
     public boolean isExpired() {
-        return System.currentTimeMillis() - creationTime > 3000; // 3 seconds
+        return System.currentTimeMillis() - creationTime > 1500; // 1.5 seconds (updated bullet lifetime)
     }
 }

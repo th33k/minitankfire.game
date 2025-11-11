@@ -26,6 +26,12 @@ class GameClient {
         this.isAlive = true;
         this.respawnTime = 0;
         
+        // Heat level system (for damage scaling)
+        this.heatLevel = 0; // 0-100, increases with each shot
+        this.maxHeatLevel = 100;
+        this.heatDecayRate = 0.5; // per frame when not firing
+        this.baseDamage = 25; // Damage per bullet
+        
         // Voice chat
         this.peerConnections = {};
         this.localStream = null;
@@ -35,6 +41,9 @@ class GameClient {
         this.chatOpen = true;
         this.chatHistory = [];
         this.killFeed = [];
+        
+        // Settings
+        this.aimLineEnabled = false; // Default off as requested
         
         this.init();
     }
@@ -50,13 +59,26 @@ class GameClient {
         document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
             
-            // Chat toggle
+            // Chat toggle (only when in game, not on join screen)
             if (e.code === 'Enter') {
+                const joinScreen = document.getElementById('join-screen');
+                const playerNameInput = document.getElementById('player-name');
+                const serverAddressInput = document.getElementById('server-address');
+                
+                // If on join screen, let the join screen handle Enter key
+                if (joinScreen && joinScreen.style.display !== 'none') {
+                    // If focused on player name or server address, let their keypress handlers work
+                    if (document.activeElement === playerNameInput || 
+                        document.activeElement === serverAddressInput) {
+                        return;
+                    }
+                }
+                
                 const chatInput = document.getElementById('chat-input');
                 if (document.activeElement === chatInput) {
                     this.sendChat();
                     chatInput.blur();
-                } else {
+                } else if (chatInput) {
                     chatInput.focus();
                 }
                 e.preventDefault();
@@ -64,7 +86,10 @@ class GameClient {
             
             // ESC to close chat input
             if (e.code === 'Escape') {
-                document.getElementById('chat-input').blur();
+                const chatInput = document.getElementById('chat-input');
+                if (chatInput) {
+                    chatInput.blur();
+                }
             }
         });
         
@@ -75,8 +100,12 @@ class GameClient {
         // Mouse
         this.canvas.addEventListener('mousemove', (e) => {
             const rect = this.canvas.getBoundingClientRect();
-            this.mouseX = e.clientX - rect.left;
-            this.mouseY = e.clientY - rect.top;
+            // Account for canvas scaling due to CSS or browser zoom
+            const scaleX = this.canvas.width / rect.width;
+            const scaleY = this.canvas.height / rect.height;
+            
+            this.mouseX = (e.clientX - rect.left) * scaleX;
+            this.mouseY = (e.clientY - rect.top) * scaleY;
             
             if (this.myPlayer) {
                 this.angle = Math.atan2(
@@ -116,6 +145,14 @@ class GameClient {
                 chatPanel.style.height = this.chatOpen ? 'auto' : '45px';
                 document.getElementById('chat-messages').style.display = this.chatOpen ? 'block' : 'none';
                 document.querySelector('.chat-input-wrapper').style.display = this.chatOpen ? 'flex' : 'none';
+            });
+        }
+        
+        // Settings button
+        const settingsBtn = document.getElementById('settings-btn');
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', () => {
+                this.toggleSettings();
             });
         }
     }
@@ -181,6 +218,55 @@ class GameClient {
             btn.classList.remove('active');
             btn.innerHTML = '<i class="fas fa-microphone"></i>';
             this.showNotification('Voice chat muted', 'info');
+        }
+    }
+
+    toggleSettings() {
+        let settingsPanel = document.getElementById('settings-panel');
+        
+        if (!settingsPanel) {
+            // Create settings panel if it doesn't exist
+            settingsPanel = document.createElement('div');
+            settingsPanel.id = 'settings-panel';
+            settingsPanel.className = 'settings-panel';
+            settingsPanel.innerHTML = `
+                <div class="settings-header">
+                    <h3>SETTINGS</h3>
+                    <button id="close-settings" class="icon-btn-small">×</button>
+                </div>
+                <div class="settings-content">
+                    <div class="setting-item">
+                        <label for="aim-line-toggle" class="setting-label">
+                            <i class="fas fa-crosshairs"></i> Aim Line
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="aim-line-toggle" ${this.aimLineEnabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(settingsPanel);
+            
+            // Add event listeners
+            document.getElementById('close-settings').addEventListener('click', () => {
+                settingsPanel.remove();
+            });
+            
+            document.getElementById('aim-line-toggle').addEventListener('change', (e) => {
+                this.aimLineEnabled = e.target.checked;
+                this.showNotification(`Aim line ${this.aimLineEnabled ? 'enabled' : 'disabled'}`, 'info');
+            });
+            
+            // Close on click outside
+            settingsPanel.addEventListener('click', (e) => {
+                if (e.target === settingsPanel) {
+                    settingsPanel.remove();
+                }
+            });
+        } else {
+            settingsPanel.remove();
         }
     }
 
@@ -293,9 +379,15 @@ class GameClient {
     joinGame(name) {
         this.playerName = name;
         const serverAddress = document.getElementById('server-address').value.trim() || 'localhost';
-        this.ws = new WebSocket(`ws://${serverAddress}:8080/game`);
+        const wsUrl = `ws://${serverAddress}:8080/game`;
+        
+        console.log('Attempting to connect to:', wsUrl);
+        this.showNotification('Connecting to server...', 'info');
+        
+        this.ws = new WebSocket(wsUrl);
         
         this.ws.onopen = () => {
+            console.log('WebSocket connected');
             this.sendMessage({ type: 'join', name: name });
             document.getElementById('join-screen').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
@@ -304,17 +396,22 @@ class GameClient {
         };
         
         this.ws.onmessage = (event) => {
-            this.handleMessage(JSON.parse(event.data));
+            try {
+                this.handleMessage(JSON.parse(event.data));
+            } catch (e) {
+                console.error('Error parsing message:', e);
+            }
         };
         
         this.ws.onclose = () => {
+            console.log('WebSocket closed');
             this.showNotification('Connection lost. Refreshing...', 'error');
             setTimeout(() => location.reload(), 3000);
         };
         
         this.ws.onerror = (error) => {
             console.error('WebSocket error:', error);
-            this.showNotification('Connection error', 'error');
+            this.showNotification('Connection error - Check console for details', 'error');
         };
     }
 
@@ -393,7 +490,16 @@ class GameClient {
     tryFire() {
         const now = Date.now();
         if (now - this.lastFireTime >= this.fireRate && this.isAlive) {
-            this.sendMessage({ type: 'fire' });
+            // Increase heat level with each shot
+            this.heatLevel = Math.min(this.maxHeatLevel, this.heatLevel + 20);
+            
+            this.sendMessage({ 
+                type: 'fire', 
+                angle: Math.round(this.angle),
+                mouseX: Math.round(this.mouseX),
+                mouseY: Math.round(this.mouseY),
+                heatLevel: Math.round(this.heatLevel)
+            });
             this.lastFireTime = now;
             this.screenShake();
         }
@@ -404,15 +510,15 @@ class GameClient {
         
         let x = this.myPlayer.x;
         let y = this.myPlayer.y;
-        const speed = this.myPlayer.speedBoost ? 5 : 3;
+        const speed = this.myPlayer.speedBoost ? 20 : 12;
 
         if (this.keys['KeyW'] || this.keys['ArrowUp']) y -= speed;
         if (this.keys['KeyS'] || this.keys['ArrowDown']) y += speed;
         if (this.keys['KeyA'] || this.keys['ArrowLeft']) x -= speed;
         if (this.keys['KeyD'] || this.keys['ArrowRight']) x += speed;
 
-        x = Math.max(15, Math.min(1185, x));
-        y = Math.max(15, Math.min(785, y));
+        x = Math.max(15, Math.min(1905, x));
+        y = Math.max(15, Math.min(1065, y));
 
         if (x !== this.myPlayer.x || y !== this.myPlayer.y || this.angle !== this.myPlayer.angle) {
             this.sendMessage({ 
@@ -586,19 +692,31 @@ class GameClient {
         document.getElementById('kills-text').textContent = this.kills;
         document.getElementById('deaths-text').textContent = this.deaths;
         
-        // Update power-up indicator
+        // Update power-up indicator with enhanced visualization
         const indicator = document.getElementById('power-up-indicator');
         if (this.myPlayer) {
-            let powerUpText = '';
-            if (this.myPlayer.shield) powerUpText = '<i class="fas fa-shield-alt"></i> SHIELD ACTIVE';
-            else if (this.myPlayer.speedBoost) powerUpText = '<i class="fas fa-bolt"></i> SPEED BOOST';
-            else if (this.myPlayer.doubleFire) powerUpText = '<i class="fas fa-fire"></i> DOUBLE FIRE';
+            let powerUpHTML = '';
             
-            if (powerUpText) {
-                indicator.innerHTML = powerUpText;
-                indicator.style.display = 'block';
+            if (this.myPlayer.shield) {
+                powerUpHTML = '<div class="powerup-item shield-active"><i class="fas fa-shield-alt"></i><div class="powerup-label">SHIELD</div></div>';
+            } else if (this.myPlayer.speedBoost) {
+                powerUpHTML = '<div class="powerup-item speed-boost-active"><i class="fas fa-bolt"></i><div class="powerup-label">SPEED</div></div>';
+            } else if (this.myPlayer.doubleFire) {
+                powerUpHTML = '<div class="powerup-item double-fire-active"><i class="fas fa-fire"></i><div class="powerup-label">DOUBLE</div></div>';
+            }
+            
+            // Add heat level indicator
+            const heatPercent = Math.round((this.heatLevel / this.maxHeatLevel) * 100);
+            const heatColor = heatPercent < 30 ? '#00ff88' : heatPercent < 70 ? '#ffaa00' : '#ff4444';
+            powerUpHTML += `<div class="heat-indicator" style="background: linear-gradient(90deg, ${heatColor} 0%, ${heatColor} ${heatPercent}%, rgba(255,255,255,0.1) ${heatPercent}%, rgba(255,255,255,0.1) 100%); border-color: ${heatColor};">
+                <div class="heat-label">HEAT: ${heatPercent}%</div>
+            </div>`;
+            
+            if (powerUpHTML) {
+                indicator.innerHTML = powerUpHTML;
+                indicator.style.display = 'flex';
             } else {
-                indicator.style.display = 'none';
+                indicator.style.display = 'flex';
             }
         }
         
@@ -664,28 +782,41 @@ class GameClient {
     gameLoop() {
         this.sendMove();
         this.updateParticles();
+        
+        // Update and decay heat level
+        this.heatLevel = Math.max(0, this.heatLevel - this.heatDecayRate);
+        
+        // Update angle to always point to mouse pointer
+        if (this.myPlayer) {
+            this.angle = Math.atan2(
+                this.mouseY - this.myPlayer.y,
+                this.mouseX - this.myPlayer.x
+            ) * 180 / Math.PI;
+        }
+        
         this.render();
         this.renderMinimap();
+        this.updateHUD();
         requestAnimationFrame(() => this.gameLoop());
     }
 
     render() {
         const ctx = this.ctx;
-        ctx.clearRect(0, 0, 1200, 800);
+        ctx.clearRect(0, 0, 1920, 1080);
 
         // Background grid
         ctx.strokeStyle = 'rgba(0, 255, 136, 0.1)';
         ctx.lineWidth = 1;
-        for (let x = 0; x <= 1200; x += 50) {
+        for (let x = 0; x <= 1920; x += 50) {
             ctx.beginPath();
             ctx.moveTo(x, 0);
-            ctx.lineTo(x, 800);
+            ctx.lineTo(x, 1080);
             ctx.stroke();
         }
-        for (let y = 0; y <= 800; y += 50) {
+        for (let y = 0; y <= 1080; y += 50) {
             ctx.beginPath();
             ctx.moveTo(0, y);
-            ctx.lineTo(1200, y);
+            ctx.lineTo(1920, y);
             ctx.stroke();
         }
 
@@ -756,14 +887,47 @@ class GameClient {
             ctx.fillRect(p.x - 18, p.y - 18, 36, 36);
             ctx.shadowBlur = 0;
             
-            // Turret
+            // Turret - tracks mouse for player, angle for others
+            const turretAngle = isMe ? this.angle : p.angle;
+            const rad = turretAngle * Math.PI / 180;
+            
+            // Draw turret barrel
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
-            const rad = p.angle * Math.PI / 180;
             ctx.lineTo(p.x + Math.cos(rad) * 25, p.y + Math.sin(rad) * 25);
             ctx.stroke();
+            
+            // Draw laser sight line for player's tank
+            if (isMe && this.aimLineEnabled) {
+                ctx.strokeStyle = 'rgba(255, 100, 100, 0.6)';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(this.mouseX, this.mouseY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Draw heat glow around barrel (always visible)
+            if (isMe) {
+                const heatPercent = this.heatLevel / this.maxHeatLevel;
+                if (heatPercent > 0) {
+                    ctx.shadowBlur = 5 + heatPercent * 15;
+                    ctx.shadowColor = heatPercent < 0.4 ? '#00ff88' : heatPercent < 0.7 ? '#ffaa00' : '#ff4444';
+                    ctx.strokeStyle = ctx.shadowColor;
+                    ctx.globalAlpha = 0.6 + heatPercent * 0.4;
+                    ctx.lineWidth = 2 + heatPercent * 3;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p.x + Math.cos(rad) * 25, p.y + Math.sin(rad) * 25);
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                    ctx.shadowBlur = 0;
+                }
+            }
             
             // Health bar
             const healthPercent = 100;
@@ -823,8 +987,8 @@ class GameClient {
         Object.values(this.players).forEach(p => {
             if (!p.alive) return;
             
-            const mx = (p.x / 1200) * 200;
-            const my = (p.y / 800) * 150;
+            const mx = (p.x / 1920) * 200;
+            const my = (p.y / 1080) * 150;
             
             ctx.fillStyle = p.id === this.playerId ? '#00ff88' : '#ff4444';
             ctx.beginPath();
