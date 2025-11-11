@@ -216,4 +216,30 @@ public class JsonUtil {
 
         return result;
     }
+
+    /**
+     * Creates a game-over message containing the winner and a leaderboard summary
+     */
+    public static String createGameOverMessage(String winnerId, String winnerName, Collection<Player> players) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"type\":\"game_over\",");
+        sb.append(String.format("\"winnerId\":\"%s\",", winnerId));
+        sb.append(String.format("\"winnerName\":\"%s\",", escapeJson(winnerName)));
+
+        // Build leaderboard sorted by score desc
+        List<Player> list = new ArrayList<>(players);
+        list.sort((a, b) -> Integer.compare(b.getScore(), a.getScore()));
+
+        sb.append("\"leaderboard\":[");
+        boolean first = true;
+        for (Player p : list) {
+            if (!first)
+                sb.append(',');
+            sb.append(String.format("{\"name\":\"%s\",\"score\":%d}", escapeJson(p.getName()), p.getScore()));
+            first = false;
+        }
+        sb.append("]}");
+
+        return sb.toString();
+    }
 }

@@ -372,6 +372,11 @@ class GameClient {
                 }
                 this.addKillFeed(msg.shooter, msg.target);
                 break;
+
+            case 'game_over':
+                // msg: { type: 'game_over', winnerId: '...', winnerName: '...', leaderboard: [ {name, score}, ... ] }
+                this.handleGameOver(msg);
+                break;
                 
             case 'voice-offer':
                 this.handleVoiceOffer(msg);
@@ -495,6 +500,84 @@ class GameClient {
                 overlay.style.display = 'none';
             }
         }, 1000);
+    }
+
+    handleGameOver(msg) {
+        // stop input/updates
+        this.isAlive = false;
+        this.showGameOverOverlay(msg);
+    }
+
+    showGameOverOverlay(msg) {
+        // Remove existing overlay if present
+        let existing = document.getElementById('game-over-overlay');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'game-over-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.left = '0';
+        overlay.style.top = '0';
+        overlay.style.width = '100%';
+        overlay.style.height = '100%';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.background = 'rgba(0,0,0,0.75)';
+        overlay.style.zIndex = '9999';
+
+        const card = document.createElement('div');
+        card.style.background = '#111';
+        card.style.color = '#fff';
+        card.style.padding = '30px';
+        card.style.borderRadius = '8px';
+        card.style.textAlign = 'center';
+        card.style.minWidth = '320px';
+
+        const title = document.createElement('h2');
+        title.style.marginTop = '0';
+        if (msg.winnerId === this.playerId) {
+            title.textContent = 'YOU WON!';
+            title.style.color = '#00ff88';
+        } else {
+            title.textContent = (msg.winnerName ? msg.winnerName : 'A player') + ' won the game';
+            title.style.color = '#ffcc00';
+        }
+
+        const subtitle = document.createElement('p');
+        subtitle.textContent = 'Final leaderboard:';
+
+        const list = document.createElement('div');
+        list.style.textAlign = 'left';
+        list.style.maxHeight = '200px';
+        list.style.overflow = 'auto';
+        list.style.margin = '10px 0';
+
+        // msg.leaderboard is expected to be an array of {name, score}
+        if (Array.isArray(msg.leaderboard)) {
+            msg.leaderboard.forEach((entry, idx) => {
+                const el = document.createElement('div');
+                el.style.padding = '6px 0';
+                el.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+                el.innerHTML = `<strong>#${idx + 1}</strong> ${entry.name} <span style="float:right">${entry.score}</span>`;
+                list.appendChild(el);
+            });
+        }
+
+        const btn = document.createElement('button');
+        btn.textContent = 'Return / Reload';
+        btn.style.marginTop = '12px';
+        btn.className = 'btn-primary';
+        btn.addEventListener('click', () => {
+            location.reload();
+        });
+
+        card.appendChild(title);
+        card.appendChild(subtitle);
+        card.appendChild(list);
+        card.appendChild(btn);
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
     }
 
     updateHUD() {
