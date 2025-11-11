@@ -29,7 +29,7 @@ class GameClient {
         // Heat level system (for damage scaling)
         this.heatLevel = 0; // 0-100, increases with each shot
         this.maxHeatLevel = 100;
-        this.heatDecayRate = 0.5; // per frame when not firing
+        this.heatDecayRate = 0.2; // per frame when not firing (reduced from 0.5 for harder gameplay)
         this.baseDamage = 25; // Damage per bullet
         
         // Voice chat
@@ -158,24 +158,74 @@ class GameClient {
     }
 
     setupJoinScreen() {
-        document.getElementById('join-btn').addEventListener('click', () => {
-            const name = document.getElementById('player-name').value.trim();
-            if (name) {
-                this.joinGame(name);
-            } else {
+        const joinForm = document.getElementById('join-form');
+        const joinBtn = document.getElementById('join-btn');
+        const playerNameInput = document.getElementById('player-name');
+        const serverAddressInput = document.getElementById('server-address');
+        
+        // Form validation
+        const validateForm = () => {
+            const name = playerNameInput.value.trim();
+            const server = serverAddressInput.value.trim();
+            const isValid = name.length > 0 && server.length > 0;
+            
+            joinBtn.disabled = !isValid;
+            return isValid;
+        };
+        
+        // Real-time validation
+        playerNameInput.addEventListener('input', validateForm);
+        serverAddressInput.addEventListener('input', validateForm);
+        
+        // Initial validation
+        validateForm();
+        
+        // Form submit handler
+        const handleSubmit = (e) => {
+            if (e) e.preventDefault();
+            
+            const name = playerNameInput.value.trim();
+            const server = serverAddressInput.value.trim();
+            
+            if (!name) {
                 this.showNotification('Please enter a callsign!', 'error');
+                playerNameInput.focus();
+                return;
+            }
+            
+            if (!server) {
+                this.showNotification('Please enter a server address!', 'error');
+                serverAddressInput.focus();
+                return;
+            }
+            
+            // Visual feedback
+            joinBtn.classList.add('loading');
+            joinBtn.disabled = true;
+            
+            this.joinGame(name, server);
+        };
+        
+        joinForm.addEventListener('submit', handleSubmit);
+        joinBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleSubmit();
+        });
+        
+        // Enter key navigation
+        serverAddressInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                playerNameInput.focus();
             }
         });
         
-        document.getElementById('player-name').addEventListener('keypress', (e) => {
+        playerNameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                document.getElementById('join-btn').click();
-            }
-        });
-        
-        document.getElementById('server-address').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('player-name').focus();
+                e.preventDefault();
+                if (validateForm()) {
+                    handleSubmit();
+                }
             }
         });
     }
@@ -211,12 +261,16 @@ class GameClient {
         
         if (this.voiceEnabled) {
             btn.classList.add('active');
-            btn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+            btn.innerHTML = '<i class="fas fa-microphone-slash" aria-hidden="true"></i>';
+            btn.setAttribute('aria-pressed', 'true');
+            btn.setAttribute('aria-label', 'Mute voice chat');
             this.showNotification('Voice chat enabled', 'success');
             this.broadcastVoiceOffer();
         } else {
             btn.classList.remove('active');
-            btn.innerHTML = '<i class="fas fa-microphone"></i>';
+            btn.innerHTML = '<i class="fas fa-microphone" aria-hidden="true"></i>';
+            btn.setAttribute('aria-pressed', 'false');
+            btn.setAttribute('aria-label', 'Enable voice chat');
             this.showNotification('Voice chat muted', 'info');
         }
     }
@@ -376,22 +430,49 @@ class GameClient {
         }
     }
 
-    joinGame(name) {
+    joinGame(name, server = 'localhost') {
         this.playerName = name;
-        const serverAddress = document.getElementById('server-address').value.trim() || 'localhost';
+        const serverAddress = server || 'localhost';
         const wsUrl = `ws://${serverAddress}:8080/game`;
         
         console.log('Attempting to connect to:', wsUrl);
-        this.showNotification('Connecting to server...', 'info');
+        
+        // Show loading overlay
+        this.showLoadingOverlay('Connecting to server...');
         
         this.ws = new WebSocket(wsUrl);
         
+        // Connection timeout
+        const connectionTimeout = setTimeout(() => {
+            if (this.ws.readyState !== WebSocket.OPEN) {
+                this.ws.close();
+                this.hideLoadingOverlay();
+                this.showNotification('Connection timeout. Please check server address.', 'error');
+                const joinBtn = document.getElementById('join-btn');
+                joinBtn.classList.remove('loading');
+                joinBtn.disabled = false;
+            }
+        }, 10000); // 10 second timeout
+        
         this.ws.onopen = () => {
+            clearTimeout(connectionTimeout);
             console.log('WebSocket connected');
             this.sendMessage({ type: 'join', name: name });
-            document.getElementById('join-screen').style.display = 'none';
-            document.getElementById('game-hud').style.display = 'block';
+            
+            // Hide join screen and show HUD
+            const joinScreen = document.getElementById('join-screen');
+            const gameHud = document.getElementById('game-hud');
+            
+            joinScreen.style.display = 'none';
+            gameHud.style.display = 'block';
+            gameHud.classList.add('active');
+            
+            this.hideLoadingOverlay();
             this.showNotification(`Welcome, ${name}!`, 'success');
+            
+            // Update ARIA attributes
+            gameHud.setAttribute('aria-hidden', 'false');
+            
             this.gameLoop();
         };
         
@@ -404,14 +485,23 @@ class GameClient {
         };
         
         this.ws.onclose = () => {
+            clearTimeout(connectionTimeout);
             console.log('WebSocket closed');
-            this.showNotification('Connection lost. Refreshing...', 'error');
+            this.hideLoadingOverlay();
+            this.showNotification('Connection lost. Refreshing in 3 seconds...', 'error');
             setTimeout(() => location.reload(), 3000);
         };
         
         this.ws.onerror = (error) => {
+            clearTimeout(connectionTimeout);
             console.error('WebSocket error:', error);
-            this.showNotification('Connection error - Check console for details', 'error');
+            this.hideLoadingOverlay();
+            this.showNotification('Failed to connect to server. Please verify the server address.', 'error');
+            
+            // Re-enable join button
+            const joinBtn = document.getElementById('join-btn');
+            joinBtn.classList.remove('loading');
+            joinBtn.disabled = false;
         };
     }
 
@@ -428,6 +518,13 @@ class GameClient {
                 msg.players.forEach(p => {
                     this.players[p.id] = p;
                     if (p.id === this.playerId || (!this.playerId && p.name === this.playerName)) {
+                        // Check for bonus collection
+                        if (this.myPlayer && p.lastPowerUpCollectTime && 
+                            p.lastPowerUpCollectTime !== this.myPlayer.lastPowerUpCollectTime) {
+                            // Bonus was just collected!
+                            this.handleBonusCollection(p);
+                        }
+                        
                         this.playerId = p.id;
                         this.myPlayer = p;
                         this.health = p.alive ? 100 : 0;
@@ -489,7 +586,29 @@ class GameClient {
 
     tryFire() {
         const now = Date.now();
-        if (now - this.lastFireTime >= this.fireRate && this.isAlive) {
+        
+        // Heat-based firing limitation for increased difficulty
+        // At 100% heat, cannot fire; gradually reduce fire rate as heat increases
+        const heatPercentage = (this.heatLevel / this.maxHeatLevel) * 100;
+        
+        // Calculate dynamic fire rate based on heat
+        // Base: 500ms, increases to 2000ms at 80% heat, blocked at 100% heat
+        let dynamicFireRate = this.fireRate;
+        if (heatPercentage >= 100) {
+            // Cannot fire at max heat
+            return;
+        } else if (heatPercentage >= 80) {
+            // Severely restricted: 2000ms fire rate
+            dynamicFireRate = 2000;
+        } else if (heatPercentage >= 60) {
+            // Restricted: 1200ms fire rate
+            dynamicFireRate = 1200;
+        } else if (heatPercentage >= 40) {
+            // Moderate restriction: 800ms fire rate
+            dynamicFireRate = 800;
+        }
+        
+        if (now - this.lastFireTime >= dynamicFireRate && this.isAlive) {
             // Increase heat level with each shot
             this.heatLevel = Math.min(this.maxHeatLevel, this.heatLevel + 20);
             
@@ -687,36 +806,73 @@ class GameClient {
     }
 
     updateHUD() {
-        // Update stats
-        document.getElementById('health-text').textContent = this.health;
-        document.getElementById('kills-text').textContent = this.kills;
-        document.getElementById('deaths-text').textContent = this.deaths;
+        // Update stats with ARIA labels
+        const healthText = document.getElementById('health-text');
+        const killsText = document.getElementById('kills-text');
+        const deathsText = document.getElementById('deaths-text');
+        
+        healthText.textContent = this.health;
+        healthText.setAttribute('aria-label', `Health: ${this.health}`);
+        
+        killsText.textContent = this.kills;
+        killsText.setAttribute('aria-label', `Kills: ${this.kills}`);
+        
+        deathsText.textContent = this.deaths;
+        deathsText.setAttribute('aria-label', `Deaths: ${this.deaths}`);
         
         // Update power-up indicator with enhanced visualization
         const indicator = document.getElementById('power-up-indicator');
         if (this.myPlayer) {
             let powerUpHTML = '';
+            let ariaLabel = '';
             
             if (this.myPlayer.shield) {
-                powerUpHTML = '<div class="powerup-item shield-active"><i class="fas fa-shield-alt"></i><div class="powerup-label">SHIELD</div></div>';
+                powerUpHTML = '<div class="powerup-item shield-active"><i class="fas fa-shield-alt" aria-hidden="true"></i><div class="powerup-label">SHIELD</div></div>';
+                ariaLabel = 'Shield active';
             } else if (this.myPlayer.speedBoost) {
-                powerUpHTML = '<div class="powerup-item speed-boost-active"><i class="fas fa-bolt"></i><div class="powerup-label">SPEED</div></div>';
+                powerUpHTML = '<div class="powerup-item speed-boost-active"><i class="fas fa-bolt" aria-hidden="true"></i><div class="powerup-label">SPEED</div></div>';
+                ariaLabel = 'Speed boost active';
             } else if (this.myPlayer.doubleFire) {
-                powerUpHTML = '<div class="powerup-item double-fire-active"><i class="fas fa-fire"></i><div class="powerup-label">DOUBLE</div></div>';
+                powerUpHTML = '<div class="powerup-item double-fire-active"><i class="fas fa-fire" aria-hidden="true"></i><div class="powerup-label">DOUBLE</div></div>';
+                ariaLabel = 'Double fire active';
             }
             
-            // Add heat level indicator
+            // Update heat level indicator (vertical bar - full map height)
             const heatPercent = Math.round((this.heatLevel / this.maxHeatLevel) * 100);
             const heatColor = heatPercent < 30 ? '#00ff88' : heatPercent < 70 ? '#ffaa00' : '#ff4444';
-            powerUpHTML += `<div class="heat-indicator" style="background: linear-gradient(90deg, ${heatColor} 0%, ${heatColor} ${heatPercent}%, rgba(255,255,255,0.1) ${heatPercent}%, rgba(255,255,255,0.1) 100%); border-color: ${heatColor};">
-                <div class="heat-label">HEAT: ${heatPercent}%</div>
-            </div>`;
+            
+            // Update vertical heat bar with ARIA
+            const heatBar = document.getElementById('heat-bar-vertical');
+            if (heatBar) {
+                heatBar.setAttribute('aria-valuenow', heatPercent);
+                heatBar.setAttribute('aria-label', `Weapon heat level: ${heatPercent} percent`);
+                
+                const segments = 160; // Total segments to fill full map height
+                const filledSegments = Math.ceil((heatPercent / 100) * segments);
+                let segmentsHTML = '';
+                for (let i = 0; i < segments; i++) {
+                    const isActive = i < filledSegments;
+                    const segmentColor = isActive ? heatColor : 'rgba(255,255,255,0.05)';
+                    segmentsHTML += `<div class="heat-bar-segment" style="background-color: ${segmentColor};"></div>`;
+                }
+                heatBar.innerHTML = segmentsHTML;
+                heatBar.style.borderColor = heatColor;
+                
+                // Update label to show percentage
+                const label = document.createElement('div');
+                label.style.cssText = 'position: absolute; font-size: 0.8rem; color: ' + heatColor + '; top: 12px; text-align: center; width: 100%; font-weight: bold;';
+                label.textContent = heatPercent + '%';
+                label.setAttribute('aria-hidden', 'true');
+                heatBar.appendChild(label);
+            }
             
             if (powerUpHTML) {
                 indicator.innerHTML = powerUpHTML;
                 indicator.style.display = 'flex';
+                indicator.setAttribute('aria-label', ariaLabel);
             } else {
                 indicator.style.display = 'flex';
+                indicator.setAttribute('aria-label', 'No active power-ups');
             }
         }
         
@@ -730,24 +886,106 @@ class GameClient {
             .sort((a, b) => b.score - a.score)
             .slice(0, 10);
         
-        scoresDiv.innerHTML = sortedPlayers.map((p, index) => `
-            <div class="score-item ${p.id === this.playerId ? 'self' : ''}">
-                <span class="score-rank">#${index + 1}</span>
-                <span class="score-name">${p.name}</span>
-                <span class="score-value">${p.score}</span>
-            </div>
-        `).join('');
+        scoresDiv.innerHTML = sortedPlayers.map((p, index) => {
+            const isCurrentPlayer = p.id === this.playerId;
+            const ariaLabel = `${index + 1}. ${p.name}: ${p.score} points${isCurrentPlayer ? ' (you)' : ''}`;
+            
+            return `
+                <div class="score-item ${isCurrentPlayer ? 'self' : ''}" role="listitem" aria-label="${ariaLabel}">
+                    <span class="score-rank" aria-hidden="true">#${index + 1}</span>
+                    <span class="score-name">${p.name}</span>
+                    <span class="score-value">${p.score}</span>
+                </div>
+            `;
+        }).join('');
     }
 
     showNotification(message, type = 'info') {
         const notifDiv = document.getElementById('notifications');
         const notif = document.createElement('div');
-        notif.className = 'notification';
-        notif.style.borderColor = type === 'error' ? '#ff4444' : type === 'success' ? '#00ff88' : '#ffaa00';
+        notif.className = `notification ${type}`;
         notif.textContent = message;
+        notif.setAttribute('role', 'alert');
         
         notifDiv.appendChild(notif);
-        setTimeout(() => notif.remove(), 3000);
+        
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            notif.style.animation = 'fadeOut 0.5s ease forwards';
+            setTimeout(() => notif.remove(), 500);
+        }, 3000);
+    }
+    
+    showLoadingOverlay(text = 'Loading...') {
+        const overlay = document.getElementById('loading-overlay');
+        const loadingText = document.getElementById('loading-text');
+        
+        if (overlay) {
+            loadingText.textContent = text;
+            overlay.classList.add('active');
+            overlay.setAttribute('aria-busy', 'true');
+        }
+    }
+    
+    hideLoadingOverlay() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+            overlay.setAttribute('aria-busy', 'false');
+        }
+    }
+
+    handleBonusCollection(player) {
+        // Determine bonus type and message
+        let bonusName = 'BONUS';
+        let bonusEmoji = '✨';
+        let bonusColor = '#ffff00';
+        
+        if (player.lastPowerUpType === 'SHIELD') {
+            bonusName = 'SHIELD ACTIVATED';
+            bonusEmoji = '🛡️';
+            bonusColor = '#00ffff';
+        } else if (player.lastPowerUpType === 'DOUBLE_FIRE') {
+            bonusName = 'DOUBLE FIRE!';
+            bonusEmoji = '🔥';
+            bonusColor = '#ff6600';
+        } else if (player.lastPowerUpType === 'SPEED_BOOST') {
+            bonusName = 'SPEED BOOST!';
+            bonusEmoji = '⚡';
+            bonusColor = '#ffff00';
+        }
+        
+        // Show notification
+        this.showNotification(`${bonusEmoji} ${bonusName} ${bonusEmoji}`, 'success');
+        
+        // Create floating bonus text
+        this.createBonusFloatingText(player, bonusName, bonusColor);
+    }
+
+    createBonusFloatingText(player, bonusName, bonusColor) {
+        const canvas = this.canvas;
+        const screenX = player.x;
+        const screenY = player.y - 60;
+        
+        // Create floating text element
+        const floatDiv = document.createElement('div');
+        floatDiv.style.cssText = `
+            position: fixed;
+            left: ${canvas.getBoundingClientRect().left + screenX}px;
+            top: ${canvas.getBoundingClientRect().top + screenY}px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: ${bonusColor};
+            pointer-events: none;
+            text-shadow: 0 0 10px ${bonusColor};
+            z-index: 100;
+            animation: bonusFloatUp 1.5s ease-out forwards;
+            transform: translate(-50%, -50%);
+        `;
+        floatDiv.textContent = bonusName;
+        document.body.appendChild(floatDiv);
+        
+        setTimeout(() => floatDiv.remove(), 1500);
     }
 
     screenShake() {
@@ -822,18 +1060,103 @@ class GameClient {
 
         // Power-ups
         Object.values(this.powerUps).forEach(pu => {
-            const colors = { SHIELD: '#00ffff', SPEED_BOOST: '#ffff00', DOUBLE_FIRE: '#ff00ff' };
+            const colors = { SHIELD: '#00ffff', SPEED_BOOST: '#ffff00', DOUBLE_FIRE: '#ff6600' };
             ctx.fillStyle = colors[pu.type] || '#ffffff';
             ctx.shadowBlur = 20;
             ctx.shadowColor = ctx.fillStyle;
             
-            // Rotating effect
             ctx.save();
             ctx.translate(pu.x, pu.y);
-            ctx.rotate((Date.now() / 500) % (2 * Math.PI));
-            ctx.fillRect(-12, -12, 24, 24);
-            ctx.restore();
             
+            const rotation = (Date.now() / 500) % (2 * Math.PI);
+            ctx.rotate(rotation);
+            
+            // Different visuals based on power-up type
+            if (pu.type === 'SHIELD') {
+                // Shield - circular with pulsing glow
+                const pulseSize = 14 + Math.sin(Date.now() / 200) * 3;
+                ctx.strokeStyle = colors.SHIELD;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, pulseSize, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Inner shield circle
+                ctx.fillStyle = colors.SHIELD;
+                ctx.globalAlpha = 0.3;
+                ctx.beginPath();
+                ctx.arc(0, 0, pulseSize - 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                
+                // Shield symbol
+                ctx.fillStyle = colors.SHIELD;
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('⬢', 0, 0);
+                
+            } else if (pu.type === 'DOUBLE_FIRE') {
+                // Double bullets - show two bullet symbols
+                ctx.fillStyle = colors.DOUBLE_FIRE;
+                
+                // Left bullet
+                ctx.save();
+                ctx.translate(-8, -2);
+                ctx.rotate(-rotation);
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Right bullet
+                ctx.save();
+                ctx.translate(8, 2);
+                ctx.rotate(-rotation);
+                ctx.beginPath();
+                ctx.arc(0, 0, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Center spark effect
+                const sparkCount = 4;
+                for (let i = 0; i < sparkCount; i++) {
+                    const angle = (rotation + (i / sparkCount) * Math.PI * 2);
+                    const x = Math.cos(angle) * 12;
+                    const y = Math.sin(angle) * 12;
+                    ctx.fillStyle = colors.DOUBLE_FIRE;
+                    ctx.globalAlpha = 0.6;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
+                
+            } else if (pu.type === 'SPEED_BOOST') {
+                // Speed boost - rotating star/diamond
+                const size = 12 + Math.sin(Date.now() / 150) * 2;
+                ctx.fillStyle = colors.SPEED_BOOST;
+                ctx.globalAlpha = 0.8;
+                ctx.fillRect(-size, -size, size * 2, size * 2);
+                ctx.globalAlpha = 1;
+                
+                // Speed lines
+                ctx.strokeStyle = colors.SPEED_BOOST;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.6;
+                for (let i = -1; i <= 1; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(-16, i * 4);
+                    ctx.lineTo(-10, i * 4);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            } else {
+                // Default square
+                ctx.fillRect(-12, -12, 24, 24);
+            }
+            
+            ctx.restore();
             ctx.shadowBlur = 0;
         });
 
@@ -871,14 +1194,103 @@ class GameClient {
             const isMe = p.id === this.playerId;
             ctx.fillStyle = isMe ? '#00ff88' : '#ff4444';
             
-            // Shield effect
+            // Enhanced Shield effect
             if (p.shield) {
+                const pulseAmount = Math.sin(Date.now() / 200) * 0.5 + 1.5;
+                const shieldRadius = 30 + pulseAmount;
+                
+                // Pulsing shield circle
                 ctx.strokeStyle = '#00ffff';
-                ctx.lineWidth = 3;
-                ctx.shadowBlur = 15;
+                ctx.lineWidth = 2 + pulseAmount * 0.5;
+                ctx.shadowBlur = 20;
                 ctx.shadowColor = '#00ffff';
-                ctx.strokeRect(p.x - 22, p.y - 22, 44, 44);
+                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 200) * 0.2;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, shieldRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Inner shield ring
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.4;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, shieldRadius - 5, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+                
+                // Shield corners (square shield corners)
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2.5;
+                const cornerSize = 22 + pulseAmount * 0.3;
+                ctx.globalAlpha = 0.7;
+                ctx.strokeRect(p.x - cornerSize, p.y - cornerSize, cornerSize * 2, cornerSize * 2);
+                ctx.globalAlpha = 1;
+                
                 ctx.shadowBlur = 0;
+            }
+            
+            // Bonus collection animation
+            if (p.lastPowerUpCollectTime) {
+                const timeSinceCollect = Date.now() - p.lastPowerUpCollectTime;
+                const animationDuration = 1000; // 1 second animation
+                
+                if (timeSinceCollect < animationDuration) {
+                    const progress = timeSinceCollect / animationDuration;
+                    const expandRadius = 40 + (progress * 60);
+                    const fadeOut = 1 - progress;
+                    
+                    ctx.save();
+                    
+                    // Get bonus type color
+                    let bonusColor = '#ffff00';
+                    let bonusSymbol = '★';
+                    if (p.lastPowerUpType === 'SHIELD') {
+                        bonusColor = '#00ffff';
+                        bonusSymbol = '⬢';
+                    } else if (p.lastPowerUpType === 'DOUBLE_FIRE') {
+                        bonusColor = '#ff6600';
+                        bonusSymbol = '⚡';
+                    } else if (p.lastPowerUpType === 'SPEED_BOOST') {
+                        bonusColor = '#ffff00';
+                        bonusSymbol = '→';
+                    }
+                    
+                    // Expanding ring effect
+                    ctx.strokeStyle = bonusColor;
+                    ctx.globalAlpha = fadeOut;
+                    ctx.lineWidth = 3;
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = bonusColor;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, expandRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Expanding particles around tank
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        const distance = 30 + (progress * 70);
+                        const px = p.x + Math.cos(angle) * distance;
+                        const py = p.y + Math.sin(angle) * distance;
+                        
+                        ctx.fillStyle = bonusColor;
+                        ctx.globalAlpha = fadeOut * 0.7;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 4 - progress * 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    // Center glow burst
+                    ctx.fillStyle = bonusColor;
+                    ctx.globalAlpha = fadeOut * 0.5;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 25, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.restore();
+                    ctx.globalAlpha = 1;
+                    ctx.shadowBlur = 0;
+                }
             }
             
             // Tank body
@@ -887,17 +1299,99 @@ class GameClient {
             ctx.fillRect(p.x - 18, p.y - 18, 36, 36);
             ctx.shadowBlur = 0;
             
+            // Active Power-Up Highlights/Glows
+            if (p.shield || p.speedBoost || p.doubleFire) {
+                // Determine glow color and intensity based on active power-ups
+                let glowColor = '#ffffff';
+                let glowIntensity = 0;
+                
+                if (p.shield) {
+                    glowColor = '#00ffff';
+                    glowIntensity = 1;
+                } else if (p.doubleFire) {
+                    glowColor = '#ff6600';
+                    glowIntensity = 0.8;
+                } else if (p.speedBoost) {
+                    glowColor = '#ffff00';
+                    glowIntensity = 0.6;
+                }
+                
+                // Pulsing tank glow
+                const glowPulse = Math.sin(Date.now() / 150) * 0.3 + 0.7;
+                ctx.strokeStyle = glowColor;
+                ctx.lineWidth = 3 * glowIntensity;
+                ctx.globalAlpha = glowPulse * glowIntensity;
+                ctx.shadowBlur = 15 + (glowPulse * 10);
+                ctx.shadowColor = glowColor;
+                ctx.strokeRect(p.x - 20, p.y - 20, 40, 40);
+                ctx.shadowBlur = 0;
+                ctx.globalAlpha = 1;
+            }
+            
             // Turret - tracks mouse for player, angle for others
             const turretAngle = isMe ? this.angle : p.angle;
             const rad = turretAngle * Math.PI / 180;
             
-            // Draw turret barrel
-            ctx.strokeStyle = '#ffffff';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p.x + Math.cos(rad) * 25, p.y + Math.sin(rad) * 25);
-            ctx.stroke();
+            // Double Fire Visualization - Two barrel effect
+            if (p.doubleFire) {
+                // Draw two offset barrels for double fire visualization
+                const barrelOffset = 8;
+                const barrelLength = 25;
+                
+                // Top barrel
+                ctx.strokeStyle = '#ff6600';
+                ctx.lineWidth = 4;
+                ctx.globalAlpha = 0.8;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#ff6600';
+                ctx.beginPath();
+                ctx.moveTo(p.x - barrelOffset * Math.sin(rad), p.y + barrelOffset * Math.cos(rad));
+                ctx.lineTo(p.x - barrelOffset * Math.sin(rad) + Math.cos(rad) * barrelLength, 
+                           p.y + barrelOffset * Math.cos(rad) + Math.sin(rad) * barrelLength);
+                ctx.stroke();
+                
+                // Bottom barrel
+                ctx.beginPath();
+                ctx.moveTo(p.x + barrelOffset * Math.sin(rad), p.y - barrelOffset * Math.cos(rad));
+                ctx.lineTo(p.x + barrelOffset * Math.sin(rad) + Math.cos(rad) * barrelLength,
+                           p.y - barrelOffset * Math.cos(rad) + Math.sin(rad) * barrelLength);
+                ctx.stroke();
+                
+                ctx.globalAlpha = 1;
+                ctx.shadowBlur = 0;
+                
+                // Muzzle flare effect
+                const flareTime = Date.now() % 200; // 200ms cycle
+                if (flareTime < 100) { // First half of cycle for flare effect
+                    const flareIntensity = 1 - (flareTime / 100);
+                    
+                    // Top muzzle flare
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.globalAlpha = flareIntensity * 0.6;
+                    ctx.beginPath();
+                    ctx.arc(p.x - barrelOffset * Math.sin(rad) + Math.cos(rad) * barrelLength, 
+                            p.y + barrelOffset * Math.cos(rad) + Math.sin(rad) * barrelLength,
+                            8 + flareIntensity * 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Bottom muzzle flare
+                    ctx.beginPath();
+                    ctx.arc(p.x + barrelOffset * Math.sin(rad) + Math.cos(rad) * barrelLength,
+                            p.y - barrelOffset * Math.cos(rad) + Math.sin(rad) * barrelLength,
+                            8 + flareIntensity * 4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.globalAlpha = 1;
+                }
+            } else {
+                // Normal single barrel
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + Math.cos(rad) * 25, p.y + Math.sin(rad) * 25);
+                ctx.stroke();
+            }
             
             // Draw laser sight line for player's tank
             if (isMe && this.aimLineEnabled) {

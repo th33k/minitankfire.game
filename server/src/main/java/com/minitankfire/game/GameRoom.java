@@ -125,10 +125,11 @@ public class GameRoom {
                 }
             }
             
-            createBullet(playerId, player, angle, heatLevel, mouseX, mouseY);
+            createBullet(playerId, player, angle, heatLevel, mouseX, mouseY, 0);
 
             if (player.hasDoubleFire()) {
-                createBullet(playerId, player, angle, heatLevel, mouseX, mouseY); // Fire second bullet
+                // Fire second bullet with slight offset to create dual fire effect
+                createBullet(playerId, player, angle, heatLevel, mouseX, mouseY, 15);
             }
         }
     }
@@ -142,14 +143,18 @@ public class GameRoom {
     }
 
     private void createBullet(String playerId, Player player, int angle) {
-        createBullet(playerId, player, angle, 0, null, null);
+        createBullet(playerId, player, angle, 0, null, null, 0);
     }
 
     private void createBullet(String playerId, Player player, int angle, int heatLevel) {
-        createBullet(playerId, player, angle, heatLevel, null, null);
+        createBullet(playerId, player, angle, heatLevel, null, null, 0);
     }
 
     private void createBullet(String playerId, Player player, int angle, int heatLevel, Integer mouseX, Integer mouseY) {
+        createBullet(playerId, player, angle, heatLevel, mouseX, mouseY, 0);
+    }
+
+    private void createBullet(String playerId, Player player, int angle, int heatLevel, Integer mouseX, Integer mouseY, int angleOffset) {
         int dx, dy;
         
         // If mouse coordinates are provided, calculate trajectory towards mouse position
@@ -165,13 +170,13 @@ public class GameRoom {
                 dy = (int) ((deltaY / distance) * BULLET_SPEED);
             } else {
                 // Fallback to angle-based calculation if mouse is exactly on player
-                double rad = Math.toRadians(angle);
+                double rad = Math.toRadians(angle + angleOffset);
                 dx = (int) (BULLET_SPEED * Math.cos(rad));
                 dy = (int) (BULLET_SPEED * Math.sin(rad));
             }
         } else {
             // Fallback to angle-based calculation
-            double rad = Math.toRadians(angle);
+            double rad = Math.toRadians(angle + angleOffset);
             dx = (int) (BULLET_SPEED * Math.cos(rad));
             dy = (int) (BULLET_SPEED * Math.sin(rad));
         }
@@ -324,6 +329,11 @@ public class GameRoom {
 
     private void applyPowerUp(Player player, PowerUp.Type type) {
         long now = System.currentTimeMillis();
+        
+        // Track power-up collection for animation
+        player.setLastPowerUpCollectTime(now);
+        player.setLastPowerUpType(type.toString());
+        
         switch (type) {
             case SHIELD:
                 player.setShield(true);
@@ -342,9 +352,27 @@ public class GameRoom {
 
     private void spawnPowerUp() {
         String id = UUID.randomUUID().toString();
-        PowerUp.Type type = PowerUp.Type.values()[random.nextInt(PowerUp.Type.values().length)];
+        
+        // Weighted randomization for better variety
+        // Use weighted distribution: 30% Shield, 35% Speed Boost, 35% Double Fire
+        int randomValue = random.nextInt(100);
+        PowerUp.Type type;
+        if (randomValue < 30) {
+            type = PowerUp.Type.SHIELD;
+        } else if (randomValue < 65) {
+            type = PowerUp.Type.SPEED_BOOST;
+        } else {
+            type = PowerUp.Type.DOUBLE_FIRE;
+        }
+        
+        // Randomize spawn location with better distribution
         int x = random.nextInt(MAP_WIDTH);
         int y = random.nextInt(MAP_HEIGHT);
+        
+        // Avoid spawning too close to edges
+        x = Math.max(100, Math.min(MAP_WIDTH - 100, x));
+        y = Math.max(100, Math.min(MAP_HEIGHT - 100, y));
+        
         powerUps.put(id, new PowerUp(id, type, x, y));
     }
 
