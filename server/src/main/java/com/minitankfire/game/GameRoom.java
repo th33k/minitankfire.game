@@ -33,16 +33,23 @@ public class GameRoom {
     private Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
     private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
     private Random random = new Random();
-    
+
     // Game loop
     private volatile boolean gameRunning = false;
     private Thread gameLoopThread;
     private long gameStartTime;
+    private int winningScore = Integer.MAX_VALUE;
+    private volatile boolean gameOver = false;
 
     public GameRoom() {
         gameStartTime = System.currentTimeMillis();
         gameRunning = true;
         startGameLoop();
+    }
+
+    public void setWinningScore(int winningScore) {
+        this.winningScore = winningScore;
+        System.out.println("[GAME] Winning score configured: " + winningScore);
     }
 
     // ========== Player Management ==========
@@ -81,7 +88,7 @@ public class GameRoom {
         Player player = players.get(playerId);
         if (player != null && player.isAlive()) {
             createBullet(playerId, player);
-            
+
             if (player.hasDoubleFire()) {
                 createBullet(playerId, player); // Fire second bullet
             }
@@ -121,11 +128,11 @@ public class GameRoom {
         bullets.entrySet().removeIf(entry -> {
             Bullet bullet = entry.getValue();
             bullet.updatePosition();
-            
+
             // Remove if expired or out of bounds
-            if (bullet.isExpired() || 
-                bullet.getX() < 0 || bullet.getX() > MAP_WIDTH ||
-                bullet.getY() < 0 || bullet.getY() > MAP_HEIGHT) {
+            if (bullet.isExpired() ||
+                    bullet.getX() < 0 || bullet.getX() > MAP_WIDTH ||
+                    bullet.getY() < 0 || bullet.getY() > MAP_HEIGHT) {
                 return true;
             }
             return false;
@@ -154,10 +161,10 @@ public class GameRoom {
     }
 
     private boolean isValidTarget(Player player, Bullet bullet) {
-        return player.isAlive() && 
-               !player.getId().equals(bullet.getOwnerId()) &&
-               Math.abs(bullet.getX() - player.getX()) < 20 &&
-               Math.abs(bullet.getY() - player.getY()) < 20;
+        return player.isAlive() &&
+                !player.getId().equals(bullet.getOwnerId()) &&
+                Math.abs(bullet.getX() - player.getX()) < 20 &&
+                Math.abs(bullet.getY() - player.getY()) < 20;
     }
 
     private void handlePlayerHit(Player player, Bullet bullet) {
@@ -170,6 +177,10 @@ public class GameRoom {
             Player shooter = players.get(bullet.getOwnerId());
             if (shooter != null) {
                 shooter.setScore(shooter.getScore() + 1);
+                // Check winning condition
+                if (!gameOver && shooter.getScore() >= winningScore) {
+                    endGame(shooter);
+                }
             }
 
             String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
@@ -179,13 +190,23 @@ public class GameRoom {
         }
     }
 
+    private void endGame(Player winner) {
+        gameOver = true;
+        gameRunning = false; // stop game loop
+        System.out.println("[GAME] Game over! Winner: " + (winner != null ? winner.getName() : "unknown"));
+
+        // Build and broadcast game over message with leaderboard
+        String gameOverMsg = JsonUtil.createGameOverMessage(winner.getId(), winner.getName(), players.values());
+        broadcastMessage(gameOverMsg);
+    }
+
     private void checkPowerUpCollisions() {
         for (Player player : players.values()) {
             if (player.isAlive()) {
                 powerUps.entrySet().removeIf(entry -> {
                     PowerUp powerUp = entry.getValue();
                     if (Math.abs(powerUp.getX() - player.getX()) < 20 &&
-                        Math.abs(powerUp.getY() - player.getY()) < 20) {
+                            Math.abs(powerUp.getY() - player.getY()) < 20) {
                         applyPowerUp(player, powerUp.getType());
                         return true;
                     }
