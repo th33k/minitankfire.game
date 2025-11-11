@@ -3,6 +3,11 @@ package com.minitankfire;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Game room that manages all game state and logic
+ * Demonstrates concurrent programming with thread-safe collections
+ * Uses multi-threading for game loop
+ */
 public class GameRoom {
     private static final int MAP_WIDTH = 800;
     private static final int MAP_HEIGHT = 600;
@@ -12,10 +17,11 @@ public class GameRoom {
     private Map<String, Player> players = new ConcurrentHashMap<>();
     private Map<String, Bullet> bullets = new ConcurrentHashMap<>();
     private Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
-    private Map<String, org.eclipse.jetty.websocket.api.Session> sessions = new ConcurrentHashMap<>();
+    private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
     private Random random = new Random();
     private long gameStartTime;
-    private boolean gameRunning = false;
+    private volatile boolean gameRunning = false;
+    private Thread gameLoopThread;
 
     public GameRoom() {
         gameStartTime = System.currentTimeMillis();
@@ -23,19 +29,20 @@ public class GameRoom {
         startGameLoop();
     }
 
-    public void addPlayer(String playerId, String name, org.eclipse.jetty.websocket.api.Session session) {
+    public void addPlayer(String playerId, String name, ClientHandler clientHandler) {
         Player player = new Player(playerId, name);
         player.setX(random.nextInt(MAP_WIDTH));
         player.setY(random.nextInt(MAP_HEIGHT));
         player.setAngle(0);
         players.put(playerId, player);
-        sessions.put(playerId, session);
+        clientHandlers.put(playerId, clientHandler);
+        System.out.println("[GAME] Player '" + name + "' joined. Total players: " + players.size());
         broadcastUpdate();
     }
 
     public void removePlayer(String playerId) {
         players.remove(playerId);
-        sessions.remove(playerId);
+        clientHandlers.remove(playerId);
         // Remove bullets owned by this player
         bullets.entrySet().removeIf(entry -> entry.getValue().getOwnerId().equals(playerId));
         broadcastUpdate();
@@ -73,9 +80,8 @@ public class GameRoom {
     public void handleChat(String playerId, String msg) {
         Player player = players.get(playerId);
         if (player != null) {
-            Message.ChatMessage chatMsg = new Message.ChatMessage();
-            chatMsg.msg = player.getName() + ": " + msg;
-            broadcastMessage(Message.toJson(chatMsg));
+            String chatMessage = JsonUtil.createChatMessage(player.getName() + ": " + msg);
+            broadcastMessage(chatMessage);
         }
     }
 
@@ -84,7 +90,8 @@ public class GameRoom {
         bullets.entrySet().removeIf(entry -> {
             Bullet bullet = entry.getValue();
             bullet.updatePosition();
-            if (bullet.isExpired() || bullet.getX() < 0 || bullet.getX() > MAP_WIDTH || bullet.getY() < 0 || bullet.getY() > MAP_HEIGHT) {
+            if (bullet.isExpired() || bullet.getX() < 0 || bullet.getX() > MAP_WIDTH || bullet.getY() < 0
+                    || bullet.getY() > MAP_HEIGHT) {
                 return true;
             }
             return false;
@@ -145,12 +152,10 @@ public class GameRoom {
                             if (shooter != null) {
                                 shooter.setScore(shooter.getScore() + 1);
                             }
-                            
+
                             // Broadcast hit message
-                            Message.HitMessage hitMsg = new Message.HitMessage();
-                            hitMsg.target = player.getId();
-                            hitMsg.shooter = bullet.getOwnerId();
-                            broadcastMessage(Message.toJson(hitMsg));
+                            String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
+                            broadcastMessage(hitMessage);
                         } else {
                             player.setShield(false);
                         }
@@ -171,7 +176,8 @@ public class GameRoom {
             if (player.isAlive()) {
                 powerUps.entrySet().removeIf(entry -> {
                     PowerUp powerUp = entry.getValue();
-                    if (Math.abs(powerUp.getX() - player.getX()) < 20 && Math.abs(powerUp.getY() - player.getY()) < 20) {
+                    if (Math.abs(powerUp.getX() - player.getX()) < 20
+                            && Math.abs(powerUp.getY() - player.getY()) < 20) {
                         applyPowerUp(player, powerUp.getType());
                         return true;
                     }
@@ -211,57 +217,85 @@ public class GameRoom {
         player.setAlive(true);
         player.setX(random.nextInt(MAP_WIDTH));
         player.setY(random.nextInt(MAP_HEIGHT));
-        Message.RespawnMessage respawnMsg = new Message.RespawnMessage();
-        respawnMsg.playerId = player.getId();
-        respawnMsg.x = player.getX();
-        respawnMsg.y = player.getY();
-        broadcastMessage(Message.toJson(respawnMsg));
+        String respawnMessage = JsonUtil.createRespawnMessage(player.getId(), player.getX(), player.getY());
+        broadcastMessage(respawnMessage);
     }
 
     private void broadcastUpdate() {
-        Message.UpdateMessage updateMsg = new Message.UpdateMessage();
-        updateMsg.players = players.values().toArray(new Player[0]);
-        updateMsg.bullets = bullets.values().toArray(new Bullet[0]);
-        updateMsg.powerUps = powerUps.values().toArray(new PowerUp[0]);
-        broadcastMessage(Message.toJson(updateMsg));
+        String updateMessage = JsonUtil.createUpdateMessage(
+                players.values(),
+                bullets.values(),
+                powerUps.values());
+        broadcastMessage(updateMessage);
     }
 
+    /**
+     * Broadcasts a message to all connected clients
+     * Demonstrates concurrent message distribution
+     */
     private void broadcastMessage(String message) {
-        for (org.eclipse.jetty.websocket.api.Session session : sessions.values()) {
+        for (ClientHandler handler : clientHandlers.values()) {
             try {
-                session.getRemote().sendString(message);
+                if (handler.isConnected()) {
+                    handler.sendMessage(message);
+                }
             } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
-    public void sendToPlayer(String playerId, String message) {
-        org.eclipse.jetty.websocket.api.Session session = sessions.get(playerId);
-        if (session != null) {
-            try {
-                session.getRemote().sendString(message);
-            } catch (Exception e) {
-                e.printStackTrace();
+                System.err.println("[GAME] Error broadcasting to client: " + e.getMessage());
             }
         }
     }
 
+    /**
+     * Sends a message to a specific player
+     */
+    public void sendToPlayer(String playerId, String message) {
+        ClientHandler handler = clientHandlers.get(playerId);
+        if (handler != null && handler.isConnected()) {
+            try {
+                handler.sendMessage(message);
+            } catch (Exception e) {
+                System.err.println("Error sending to player " + playerId + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Starts the game loop in a separate thread
+     * Demonstrates multi-threading for game state updates
+     */
     private void startGameLoop() {
-        Thread gameLoop = new Thread(() -> {
+        gameLoopThread = new Thread(() -> {
+            System.out.println("Game loop started");
             while (gameRunning) {
                 updateGameState();
                 try {
-                    Thread.sleep(50); // 20 FPS
+                    Thread.sleep(50); // 20 FPS (50ms per frame)
                 } catch (InterruptedException e) {
+                    System.out.println("Game loop interrupted");
                     break;
                 }
             }
-        });
-        gameLoop.start();
+            System.out.println("Game loop stopped");
+        }, "GameLoop");
+        gameLoopThread.setDaemon(false);
+        gameLoopThread.start();
     }
 
+    /**
+     * Stops the game room and all related threads
+     */
     public void stop() {
         gameRunning = false;
+        if (gameLoopThread != null) {
+            gameLoopThread.interrupt();
+        }
+        // Disconnect all clients
+        for (ClientHandler handler : clientHandlers.values()) {
+            handler.stop();
+        }
+        clientHandlers.clear();
+        players.clear();
+        bullets.clear();
+        powerUps.clear();
     }
 }

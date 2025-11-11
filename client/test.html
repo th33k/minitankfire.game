@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #00ff88; }
+        #log { white-space: pre-wrap; background: #0a0a0a; padding: 10px; border: 1px solid #00ff88; max-height: 500px; overflow-y: auto; }
+        button { margin: 5px; padding: 10px; background: #00ff88; color: #000; border: none; cursor: pointer; }
+        input { padding: 10px; background: #2a2a3e; color: #00ff88; border: 1px solid #00ff88; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Connection Test</h1>
+    <div>
+        <input type="text" id="nameInput" placeholder="Enter your name" value="TestPlayer">
+        <button onclick="connect()">Connect & Join</button>
+        <button onclick="sendMove()">Send Move</button>
+        <button onclick="sendFire()">Send Fire</button>
+        <button onclick="sendChat()">Send Chat</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    <h2>Log:</h2>
+    <div id="log"></div>
+
+    <script>
+        let ws = null;
+        let messageCount = 0;
+
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${msg}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function connect() {
+            const name = document.getElementById('nameInput').value || 'TestPlayer';
+            log('Connecting to ws://localhost:8080/game...');
+            
+            ws = new WebSocket('ws://localhost:8080/game');
+            
+            ws.onopen = () => {
+                log('✓ WebSocket CONNECTED!');
+                log('Sending join message with name: ' + name);
+                const joinMsg = { type: 'join', name: name };
+                ws.send(JSON.stringify(joinMsg));
+                log('Sent: ' + JSON.stringify(joinMsg));
+            };
+            
+            ws.onmessage = (event) => {
+                messageCount++;
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'update') {
+                    log(`✓ Received UPDATE #${messageCount}: ${msg.players.length} players, ${msg.bullets.length} bullets, ${msg.powerUps.length} powerups`);
+                    if (msg.players.length > 0) {
+                        const player = msg.players[0];
+                        log(`  Player: id=${player.id.substring(0,8)}..., name=${player.name}, pos=(${player.x},${player.y}), alive=${player.alive}`);
+                    }
+                } else {
+                    log(`✓ Received ${msg.type.toUpperCase()}: ` + JSON.stringify(msg).substring(0, 100));
+                }
+            };
+            
+            ws.onerror = (error) => {
+                log('✗ WebSocket ERROR: ' + error);
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                log('✗ WebSocket CLOSED');
+            };
+        }
+
+        function sendMove() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('✗ Not connected!');
+                return;
+            }
+            const moveMsg = { type: 'move', x: 400, y: 300, angle: 45 };
+            ws.send(JSON.stringify(moveMsg));
+            log('Sent MOVE: ' + JSON.stringify(moveMsg));
+        }
+
+        function sendFire() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('✗ Not connected!');
+                return;
+            }
+            const fireMsg = { type: 'fire' };
+            ws.send(JSON.stringify(fireMsg));
+            log('Sent FIRE');
+        }
+
+        function sendChat() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('✗ Not connected!');
+                return;
+            }
+            const chatMsg = { type: 'chat', msg: 'Hello from test page!' };
+            ws.send(JSON.stringify(chatMsg));
+            log('Sent CHAT: ' + JSON.stringify(chatMsg));
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+            messageCount = 0;
+        }
+
+        log('Test page loaded. Click "Connect & Join" to start.');
+    </script>
+</body>
+</html>

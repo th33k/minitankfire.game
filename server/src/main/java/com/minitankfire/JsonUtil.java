@@ -1,0 +1,217 @@
+package com.minitankfire;
+
+import java.util.*;
+
+/**
+ * Simple JSON utility class using only core Java APIs
+ * Demonstrates string manipulation and data serialization without external
+ * libraries
+ */
+public class JsonUtil {
+
+    /**
+     * Escapes special characters in JSON strings
+     */
+    private static String escapeJson(String str) {
+        if (str == null)
+            return "null";
+        StringBuilder sb = new StringBuilder();
+        for (char c : str.toCharArray()) {
+            switch (c) {
+                case '"':
+                    sb.append("\\\"");
+                    break;
+                case '\\':
+                    sb.append("\\\\");
+                    break;
+                case '\b':
+                    sb.append("\\b");
+                    break;
+                case '\f':
+                    sb.append("\\f");
+                    break;
+                case '\n':
+                    sb.append("\\n");
+                    break;
+                case '\r':
+                    sb.append("\\r");
+                    break;
+                case '\t':
+                    sb.append("\\t");
+                    break;
+                default:
+                    sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Converts a Player object to JSON string
+     */
+    public static String toJson(Player player) {
+        return String.format(
+                "{\"id\":\"%s\",\"name\":\"%s\",\"x\":%d,\"y\":%d,\"angle\":%d,\"score\":%d," +
+                        "\"alive\":%b,\"hasShield\":%b,\"speedBoost\":%b,\"doubleFire\":%b}",
+                player.getId(), escapeJson(player.getName()), player.getX(), player.getY(),
+                player.getAngle(), player.getScore(), player.isAlive(), player.hasShield(),
+                player.hasSpeedBoost(), player.hasDoubleFire());
+    }
+
+    /**
+     * Converts a Bullet object to JSON string
+     */
+    public static String toJson(Bullet bullet) {
+        return String.format(
+                "{\"id\":\"%s\",\"ownerId\":\"%s\",\"x\":%d,\"y\":%d,\"dx\":%d,\"dy\":%d}",
+                bullet.getId(), bullet.getOwnerId(), bullet.getX(), bullet.getY(),
+                bullet.getDx(), bullet.getDy());
+    }
+
+    /**
+     * Converts a PowerUp object to JSON string
+     */
+    public static String toJson(PowerUp powerUp) {
+        return String.format(
+                "{\"id\":\"%s\",\"type\":\"%s\",\"x\":%d,\"y\":%d}",
+                powerUp.getId(), powerUp.getType().name(), powerUp.getX(), powerUp.getY());
+    }
+
+    /**
+     * Creates an update message with players, bullets, and powerups
+     */
+    public static String createUpdateMessage(Collection<Player> players,
+            Collection<Bullet> bullets,
+            Collection<PowerUp> powerUps) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"type\":\"update\",\"players\":[");
+
+        boolean first = true;
+        for (Player player : players) {
+            if (!first)
+                sb.append(",");
+            sb.append(toJson(player));
+            first = false;
+        }
+
+        sb.append("],\"bullets\":[");
+        first = true;
+        for (Bullet bullet : bullets) {
+            if (!first)
+                sb.append(",");
+            sb.append(toJson(bullet));
+            first = false;
+        }
+
+        sb.append("],\"powerUps\":[");
+        first = true;
+        for (PowerUp powerUp : powerUps) {
+            if (!first)
+                sb.append(",");
+            sb.append(toJson(powerUp));
+            first = false;
+        }
+
+        sb.append("]}");
+        return sb.toString();
+    }
+
+    /**
+     * Creates a chat message
+     */
+    public static String createChatMessage(String msg) {
+        return String.format("{\"type\":\"chat\",\"msg\":\"%s\"}", escapeJson(msg));
+    }
+
+    /**
+     * Creates a hit message
+     */
+    public static String createHitMessage(String target, String shooter) {
+        return String.format("{\"type\":\"hit\",\"target\":\"%s\",\"shooter\":\"%s\"}",
+                target, shooter);
+    }
+
+    /**
+     * Creates a respawn message
+     */
+    public static String createRespawnMessage(String playerId, int x, int y) {
+        return String.format("{\"type\":\"respawn\",\"playerId\":\"%s\",\"x\":%d,\"y\":%d}",
+                playerId, x, y);
+    }
+
+    /**
+     * Parses a simple JSON string to extract key-value pairs
+     * This is a simplified parser for the game's specific message format
+     */
+    public static Map<String, String> parseJson(String json) {
+        Map<String, String> result = new HashMap<>();
+
+        // Remove outer braces
+        json = json.trim();
+        if (json.startsWith("{"))
+            json = json.substring(1);
+        if (json.endsWith("}"))
+            json = json.substring(0, json.length() - 1);
+
+        // Simple state machine parser
+        StringBuilder key = new StringBuilder();
+        StringBuilder value = new StringBuilder();
+        boolean inKey = true;
+        boolean inString = false;
+        boolean escape = false;
+
+        for (int i = 0; i < json.length(); i++) {
+            char c = json.charAt(i);
+
+            if (escape) {
+                if (inKey)
+                    key.append(c);
+                else
+                    value.append(c);
+                escape = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escape = true;
+                continue;
+            }
+
+            if (c == '"') {
+                inString = !inString;
+                continue;
+            }
+
+            if (!inString) {
+                if (c == ':') {
+                    inKey = false;
+                    continue;
+                }
+                if (c == ',') {
+                    if (key.length() > 0) {
+                        result.put(key.toString().trim(), value.toString().trim());
+                    }
+                    key = new StringBuilder();
+                    value = new StringBuilder();
+                    inKey = true;
+                    continue;
+                }
+                if (Character.isWhitespace(c))
+                    continue;
+            }
+
+            if (inKey) {
+                key.append(c);
+            } else {
+                value.append(c);
+            }
+        }
+
+        // Don't forget the last key-value pair
+        if (key.length() > 0) {
+            result.put(key.toString().trim(), value.toString().trim());
+        }
+
+        return result;
+    }
+}
