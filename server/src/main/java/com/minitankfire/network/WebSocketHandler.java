@@ -1,4 +1,4 @@
-package com.minitankfire;
+package com.minitankfire.network;
 
 import java.io.*;
 import java.net.Socket;
@@ -9,9 +9,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Pure Java implementation of WebSocket protocol (RFC 6455)
- * Demonstrates low-level socket programming and protocol implementation
- * No external dependencies - only core Java networking APIs
+ * WebSocket protocol handler (RFC 6455).
+ * Manages WebSocket handshake, frame encoding/decoding, and message transmission.
+ * Pure Java implementation - no external dependencies.
  */
 public class WebSocketHandler {
     private Socket socket;
@@ -31,8 +31,8 @@ public class WebSocketHandler {
     }
 
     /**
-     * Performs WebSocket handshake according to RFC 6455
-     * Demonstrates HTTP protocol parsing and header manipulation
+     * Performs WebSocket handshake according to RFC 6455.
+     * Validates upgrade request and sends appropriate response.
      */
     public boolean performHandshake() throws Exception {
         BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.UTF_8));
@@ -91,8 +91,8 @@ public class WebSocketHandler {
     }
 
     /**
-     * Reads a WebSocket frame and decodes the message
-     * Demonstrates binary protocol parsing and bit manipulation
+     * Reads a WebSocket frame and decodes the message.
+     * Handles different frame types (text, ping, close, etc.).
      */
     public String readMessage() throws IOException {
         if (!connected)
@@ -106,7 +106,6 @@ public class WebSocketHandler {
         }
 
         // Parse frame header (FIN flag not currently used, but part of protocol)
-        // boolean fin = (firstByte & 0x80) != 0;
         int opcode = firstByte & 0x0F;
 
         // Handle close frame
@@ -175,8 +174,8 @@ public class WebSocketHandler {
     }
 
     /**
-     * Sends a WebSocket text frame
-     * Demonstrates frame construction and binary encoding
+     * Sends a WebSocket text frame.
+     * Constructs frame header and encodes payload.
      */
     public synchronized void sendMessage(String message) throws IOException {
         if (!connected)

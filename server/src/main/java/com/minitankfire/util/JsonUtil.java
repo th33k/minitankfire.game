@@ -1,11 +1,13 @@
-package com.minitankfire;
+package com.minitankfire.util;
 
 import java.util.*;
+import com.minitankfire.model.Player;
+import com.minitankfire.model.Bullet;
+import com.minitankfire.model.PowerUp;
 
 /**
- * Simple JSON utility class using only core Java APIs
- * Demonstrates string manipulation and data serialization without external
- * libraries
+ * JSON utility class for serializing/deserializing game objects.
+ * Uses only core Java APIs - no external JSON libraries.
  */
 public class JsonUtil {
 

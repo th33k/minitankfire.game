@@ -1,4 +1,4 @@
-package com.minitankfire;
+package com.minitankfire.server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -6,29 +6,24 @@ import java.net.Socket;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import com.minitankfire.game.GameRoom;
+import com.minitankfire.network.ClientHandler;
 
 /**
- * Pure Java Network Programming implementation of Tank Game Server
+ * Tank Game Server - Main server entry point.
  * 
- * Key Network Programming Concepts Demonstrated:
- * 1. ServerSocket - TCP server socket for accepting client connections
- * 2. Socket - Individual client connections
- * 3. Multi-threading - Thread pool (ExecutorService) for concurrent client
- * handling
- * 4. WebSocket Protocol - Manual implementation of RFC 6455
- * 5. Client-Server Architecture - Multiple clients connecting to a central
- * server
- * 6. Concurrent Programming - Thread-safe data structures (ConcurrentHashMap)
- * 7. I/O Streams - Reading/writing data over network sockets
+ * Manages:
+ * - TCP ServerSocket listening for WebSocket connections
+ * - Thread pool for concurrent client handling
+ * - Game room initialization and lifecycle
  * 
- * NO EXTERNAL FRAMEWORKS - Only core Java APIs used:
- * - java.net.ServerSocket
- * - java.net.Socket
- * - java.io.InputStream / OutputStream
- * - java.util.concurrent (for thread management)
+ * Pure Java implementation using only core APIs:
+ * - java.net.ServerSocket (TCP server)
+ * - java.net.Socket (client connections)
+ * - java.util.concurrent (threading)
  */
 public class GameServer {
-    private static final int PORT = 8080;
+    private static final int DEFAULT_PORT = 8080;
     private static final int MAX_CLIENTS = 100;
 
     private ServerSocket serverSocket;
@@ -42,30 +37,33 @@ public class GameServer {
         this.gameRoom = new GameRoom();
         this.running = true;
 
+        printBanner(port);
+    }
+
+    /**
+     * Prints welcome banner with server information
+     */
+    private void printBanner(int port) {
         System.out.println("╔════════════════════════════════════════════════════════════╗");
-        System.out.println("║      Tank Game Server - Pure Java Network Programming     ║");
+        System.out.println("║      🎮 Tank Game Server - Pure Java Network Programming   ║");
         System.out.println("╠════════════════════════════════════════════════════════════╣");
-        System.out.println("║  Network Concepts Demonstrated:                           ║");
-        System.out.println("║  ✓ ServerSocket (TCP Server)                              ║");
-        System.out.println("║  ✓ Socket Programming (Client Connections)                ║");
-        System.out.println("║  ✓ Multi-threading (Thread Pool)                          ║");
-        System.out.println("║  ✓ WebSocket Protocol (RFC 6455 Manual Implementation)    ║");
-        System.out.println("║  ✓ Client-Server Communication                            ║");
-        System.out.println("║  ✓ Concurrent Programming (Thread-safe Collections)       ║");
-        System.out.println("║  ✓ I/O Streams (Network Data Transfer)                    ║");
+        System.out.println("║  Architecture:                                             ║");
+        System.out.println("║  ✓ Multi-threaded Client Handling                          ║");
+        System.out.println("║  ✓ WebSocket Protocol (RFC 6455)                           ║");
+        System.out.println("║  ✓ Real-time Game Loop (20 FPS)                            ║");
+        System.out.println("║  ✓ Concurrent State Management                             ║");
         System.out.println("╠════════════════════════════════════════════════════════════╣");
-        System.out.println("║  Server started on: 0.0.0.0:" + port + "                            ║");
-        System.out.println("║  Max concurrent clients: " + MAX_CLIENTS + "                             ║");
-        System.out.println("║  WebSocket endpoint: ws://localhost:" + port + "/game              ║");
+        System.out.println("║  Server Address: 0.0.0.0:" + String.format("%-43s", port) + "║");
+        System.out.println("║  WebSocket URI: ws://localhost:" + String.format("%-37s", port + "/game") + "║");
+        System.out.println("║  Max Clients: " + String.format("%-48s", MAX_CLIENTS) + "║");
         System.out.println("╚════════════════════════════════════════════════════════════╝");
     }
 
     /**
-     * Main server loop - accepts client connections
-     * Demonstrates ServerSocket.accept() blocking I/O
+     * Main server loop - accepts and handles client connections
      */
     public void start() {
-        System.out.println("\n[SERVER] Waiting for client connections...\n");
+        System.out.println("\n[SERVER] Waiting for connections...\n");
 
         while (running) {
             try {
@@ -76,9 +74,8 @@ public class GameServer {
                 clientSocket.setTcpNoDelay(true); // Disable Nagle's algorithm for real-time game
                 clientSocket.setSoTimeout(0); // No read timeout
 
-                System.out.println("[CONNECTION] New client from: " +
-                        clientSocket.getInetAddress().getHostAddress() +
-                        ":" + clientSocket.getPort());
+                String clientAddr = clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort();
+                System.out.println("[ACCEPT] New client from: " + clientAddr);
 
                 // Create client handler and submit to thread pool
                 ClientHandler handler = new ClientHandler(clientSocket, gameRoom);
@@ -86,7 +83,7 @@ public class GameServer {
 
             } catch (IOException e) {
                 if (running) {
-                    System.err.println("[ERROR] Error accepting client: " + e.getMessage());
+                    System.err.println("[ERROR] Accept failed: " + e.getMessage());
                 }
             }
         }
@@ -96,7 +93,7 @@ public class GameServer {
      * Gracefully shuts down the server
      */
     public void shutdown() {
-        System.out.println("\n[SERVER] Shutting down...");
+        System.out.println("\n[SHUTDOWN] Server shutting down...");
         running = false;
 
         try {
@@ -108,15 +105,16 @@ public class GameServer {
             // Stop game room
             gameRoom.stop();
 
-            // Shutdown thread pool
+            // Shutdown thread pool gracefully
             clientThreadPool.shutdown();
             if (!clientThreadPool.awaitTermination(5, TimeUnit.SECONDS)) {
+                System.out.println("[SHUTDOWN] Force terminating remaining threads...");
                 clientThreadPool.shutdownNow();
             }
 
-            System.out.println("[SERVER] Server stopped successfully");
+            System.out.println("[SHUTDOWN] Server stopped successfully");
         } catch (Exception e) {
-            System.err.println("[ERROR] Error during shutdown: " + e.getMessage());
+            System.err.println("[ERROR] Shutdown error: " + e.getMessage());
         }
     }
 
@@ -124,14 +122,15 @@ public class GameServer {
      * Main entry point
      */
     public static void main(String[] args) {
-        int port = PORT;
+        int port = DEFAULT_PORT;
 
         // Allow custom port via command line argument
         if (args.length > 0) {
             try {
                 port = Integer.parseInt(args[0]);
             } catch (NumberFormatException e) {
-                System.err.println("Invalid port number, using default: " + PORT);
+                System.err.println("[ERROR] Invalid port, using default: " + DEFAULT_PORT);
+                port = DEFAULT_PORT;
             }
         }
 
@@ -139,10 +138,10 @@ public class GameServer {
         try {
             server = new GameServer(port);
 
-            // Add shutdown hook for graceful termination
+            // Add shutdown hook for graceful termination (Ctrl+C)
             final GameServer finalServer = server;
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                System.out.println("\n[SHUTDOWN] Received shutdown signal");
+                System.out.println("\n[SIGNAL] Received shutdown signal");
                 finalServer.shutdown();
             }));
 

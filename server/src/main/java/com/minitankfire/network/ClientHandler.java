@@ -1,12 +1,14 @@
-package com.minitankfire;
+package com.minitankfire.network;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.Map;
+import com.minitankfire.game.GameRoom;
+import com.minitankfire.util.JsonUtil;
 
 /**
- * Handles individual client connections using multi-threading
- * Each client runs in its own thread, demonstrating concurrent programming
+ * Handles individual client connections.
+ * Each client runs in its own thread, managing incoming messages and updates.
  */
 public class ClientHandler implements Runnable {
     private WebSocketHandler webSocket;
@@ -22,21 +24,21 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Main client thread execution
-     * Demonstrates thread lifecycle and message handling loop
+     * Main client thread execution.
+     * Performs WebSocket handshake and processes incoming messages.
      */
     @Override
     public void run() {
         try {
             // Perform WebSocket handshake
             if (!webSocket.performHandshake()) {
-                System.err.println("WebSocket handshake failed for client: " + playerId);
+                System.err.println("[HANDSHAKE] Failed for client: " + playerId);
                 webSocket.close();
                 return;
             }
 
-            System.out.println("Client connected: " + playerId + " from " +
-                    webSocket.getSocket().getInetAddress());
+            System.out.println("[CONNECTED] Client: " + playerId.substring(0, 8) + 
+                    " from " + webSocket.getSocket().getInetAddress());
 
             // Message processing loop
             while (running && webSocket.isConnected()) {
@@ -49,15 +51,15 @@ public class ClientHandler implements Runnable {
             }
 
         } catch (Exception e) {
-            System.err.println("Error handling client " + playerId + ": " + e.getMessage());
+            System.err.println("[ERROR] Client " + playerId.substring(0, 8) + ": " + e.getMessage());
         } finally {
             cleanup();
         }
     }
 
     /**
-     * Handles incoming messages from client
-     * Demonstrates message parsing and game logic integration
+     * Handles incoming messages from the client.
+     * Routes messages to appropriate game logic handlers.
      */
     private void handleMessage(String message) {
         try {
@@ -69,23 +71,11 @@ public class ClientHandler implements Runnable {
 
             switch (type) {
                 case "join":
-                    String name = data.get("name");
-                    if (name != null) {
-                        System.out
-                                .println("[JOIN] Player '" + name + "' joining (ID: " + playerId.substring(0, 8) + ")");
-                        gameRoom.addPlayer(playerId, name, this);
-                    }
+                    handleJoin(data);
                     break;
 
                 case "move":
-                    try {
-                        int x = Integer.parseInt(data.get("x"));
-                        int y = Integer.parseInt(data.get("y"));
-                        int angle = Integer.parseInt(data.get("angle"));
-                        gameRoom.handleMove(playerId, x, y, angle);
-                    } catch (NumberFormatException e) {
-                        // Invalid coordinates, ignore
-                    }
+                    handleMove(data);
                     break;
 
                 case "fire":
@@ -93,29 +83,55 @@ public class ClientHandler implements Runnable {
                     break;
 
                 case "chat":
-                    String msg = data.get("msg");
-                    if (msg != null) {
-                        gameRoom.handleChat(playerId, msg);
-                    }
+                    handleChat(data);
                     break;
 
                 case "voice-offer":
                 case "voice-answer":
                 case "voice-ice":
-                    // Forward voice chat signaling messages
-                    String target = data.get("target");
-                    if (target != null) {
-                        // Reconstruct message with from field
-                        String forwardMsg = message.replace("}", ",\"from\":\"" + playerId + "\"}");
-                        gameRoom.sendToPlayer(target, forwardMsg);
-                    }
+                    forwardVoiceSignal(data, message);
                     break;
 
                 default:
-                    System.out.println("Unknown message type: " + type);
+                    System.out.println("[UNKNOWN] Message type: " + type);
             }
         } catch (Exception e) {
-            System.err.println("Error processing message from " + playerId + ": " + e.getMessage());
+            System.err.println("[MESSAGE_ERROR] " + playerId.substring(0, 8) + ": " + e.getMessage());
+        }
+    }
+
+    private void handleJoin(Map<String, String> data) {
+        String name = data.get("name");
+        if (name != null) {
+            System.out.println("[JOIN] Player '" + name + "' (ID: " + playerId.substring(0, 8) + ")");
+            gameRoom.addPlayer(playerId, name, this);
+        }
+    }
+
+    private void handleMove(Map<String, String> data) {
+        try {
+            int x = Integer.parseInt(data.get("x"));
+            int y = Integer.parseInt(data.get("y"));
+            int angle = Integer.parseInt(data.get("angle"));
+            gameRoom.handleMove(playerId, x, y, angle);
+        } catch (NumberFormatException e) {
+            // Invalid coordinates, ignore
+        }
+    }
+
+    private void handleChat(Map<String, String> data) {
+        String msg = data.get("msg");
+        if (msg != null) {
+            gameRoom.handleChat(playerId, msg);
+        }
+    }
+
+    private void forwardVoiceSignal(Map<String, String> data, String message) {
+        String target = data.get("target");
+        if (target != null) {
+            // Reconstruct message with from field
+            String forwardMsg = message.replace("}", ",\"from\":\"" + playerId + "\"}");
+            gameRoom.sendToPlayer(target, forwardMsg);
         }
     }
 
@@ -126,7 +142,7 @@ public class ClientHandler implements Runnable {
         try {
             webSocket.sendMessage(message);
         } catch (IOException e) {
-            System.err.println("Error sending message to " + playerId + ": " + e.getMessage());
+            System.err.println("[SEND_ERROR] " + playerId.substring(0, 8) + ": " + e.getMessage());
             stop();
         }
     }
@@ -142,7 +158,7 @@ public class ClientHandler implements Runnable {
      * Cleanup resources when client disconnects
      */
     private void cleanup() {
-        System.out.println("Client disconnected: " + playerId);
+        System.out.println("[DISCONNECTED] Client: " + playerId.substring(0, 8));
         gameRoom.removePlayer(playerId);
         webSocket.close();
     }

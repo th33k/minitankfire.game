@@ -1,33 +1,51 @@
-package com.minitankfire;
+package com.minitankfire.game;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import com.minitankfire.model.Player;
+import com.minitankfire.model.Bullet;
+import com.minitankfire.model.PowerUp;
+import com.minitankfire.network.ClientHandler;
+import com.minitankfire.util.JsonUtil;
 
 /**
- * Game room that manages all game state and logic
- * Demonstrates concurrent programming with thread-safe collections
- * Uses multi-threading for game loop
+ * Game Room - Core game logic and state management.
+ * Manages all players, bullets, power-ups, and game physics.
+ * Runs game loop in separate thread for real-time updates.
  */
 public class GameRoom {
+    // Game constants
     private static final int MAP_WIDTH = 800;
     private static final int MAP_HEIGHT = 600;
     private static final int PLAYER_SPEED = 3;
     private static final int BULLET_SPEED = 8;
+    private static final int GAME_TICK_MS = 50; // 20 FPS
+    private static final int RESPAWN_TIME_MS = 3000;
+    private static final int SHIELD_DURATION_MS = 5000;
+    private static final int SPEED_BOOST_DURATION_MS = 3000;
+    private static final int DOUBLE_FIRE_DURATION_MS = 10000;
+    private static final int POWERUP_LIFETIME_MS = 10000;
+    private static final int BULLET_LIFETIME_MS = 3000;
 
+    // Game state
     private Map<String, Player> players = new ConcurrentHashMap<>();
     private Map<String, Bullet> bullets = new ConcurrentHashMap<>();
     private Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
     private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
     private Random random = new Random();
-    private long gameStartTime;
+    
+    // Game loop
     private volatile boolean gameRunning = false;
     private Thread gameLoopThread;
+    private long gameStartTime;
 
     public GameRoom() {
         gameStartTime = System.currentTimeMillis();
         gameRunning = true;
         startGameLoop();
     }
+
+    // ========== Player Management ==========
 
     public void addPlayer(String playerId, String name, ClientHandler clientHandler) {
         Player player = new Player(playerId, name);
@@ -36,7 +54,7 @@ public class GameRoom {
         player.setAngle(0);
         players.put(playerId, player);
         clientHandlers.put(playerId, clientHandler);
-        System.out.println("[GAME] Player '" + name + "' joined. Total players: " + players.size());
+        System.out.println("[GAME] Player '" + name + "' joined. Total: " + players.size());
         broadcastUpdate();
     }
 
@@ -47,6 +65,8 @@ public class GameRoom {
         bullets.entrySet().removeIf(entry -> entry.getValue().getOwnerId().equals(playerId));
         broadcastUpdate();
     }
+
+    // ========== Input Handling ==========
 
     public void handleMove(String playerId, int x, int y, int angle) {
         Player player = players.get(playerId);
@@ -60,19 +80,10 @@ public class GameRoom {
     public void handleFire(String playerId) {
         Player player = players.get(playerId);
         if (player != null && player.isAlive()) {
-            double rad = Math.toRadians(player.getAngle());
-            int dx = (int) (BULLET_SPEED * Math.cos(rad));
-            int dy = (int) (BULLET_SPEED * Math.sin(rad));
-
-            String bulletId = UUID.randomUUID().toString();
-            Bullet bullet = new Bullet(bulletId, playerId, player.getX(), player.getY(), dx, dy);
-            bullets.put(bulletId, bullet);
-
+            createBullet(playerId, player);
+            
             if (player.hasDoubleFire()) {
-                // Fire second bullet slightly offset
-                String bulletId2 = UUID.randomUUID().toString();
-                Bullet bullet2 = new Bullet(bulletId2, playerId, player.getX(), player.getY(), dx, dy);
-                bullets.put(bulletId2, bullet2);
+                createBullet(playerId, player); // Fire second bullet
             }
         }
     }
@@ -85,30 +96,115 @@ public class GameRoom {
         }
     }
 
+    private void createBullet(String playerId, Player player) {
+        double rad = Math.toRadians(player.getAngle());
+        int dx = (int) (BULLET_SPEED * Math.cos(rad));
+        int dy = (int) (BULLET_SPEED * Math.sin(rad));
+
+        String bulletId = UUID.randomUUID().toString();
+        Bullet bullet = new Bullet(bulletId, playerId, player.getX(), player.getY(), dx, dy);
+        bullets.put(bulletId, bullet);
+    }
+
+    // ========== Game State Updates ==========
+
     private void updateGameState() {
-        // Update bullets
+        updateBullets();
+        checkCollisions();
+        updatePowerUps();
+        updatePlayerPowerUps();
+        respawnDeadPlayers();
+        broadcastUpdate();
+    }
+
+    private void updateBullets() {
         bullets.entrySet().removeIf(entry -> {
             Bullet bullet = entry.getValue();
             bullet.updatePosition();
-            if (bullet.isExpired() || bullet.getX() < 0 || bullet.getX() > MAP_WIDTH || bullet.getY() < 0
-                    || bullet.getY() > MAP_HEIGHT) {
+            
+            // Remove if expired or out of bounds
+            if (bullet.isExpired() || 
+                bullet.getX() < 0 || bullet.getX() > MAP_WIDTH ||
+                bullet.getY() < 0 || bullet.getY() > MAP_HEIGHT) {
                 return true;
             }
             return false;
         });
+    }
 
-        // Check collisions
-        checkCollisions();
+    private void checkCollisions() {
+        checkBulletPlayerCollisions();
+        checkPowerUpCollisions();
+    }
 
-        // Update power-ups
-        powerUps.entrySet().removeIf(entry -> entry.getValue().isExpired());
+    private void checkBulletPlayerCollisions() {
+        List<String> bulletsToRemove = new ArrayList<>();
 
-        // Spawn power-ups randomly
-        if (random.nextInt(1000) < 5) { // 0.5% chance per tick
-            spawnPowerUp();
+        for (Bullet bullet : bullets.values()) {
+            for (Player player : players.values()) {
+                if (isValidTarget(player, bullet)) {
+                    handlePlayerHit(player, bullet);
+                    bulletsToRemove.add(bullet.getId());
+                    break;
+                }
+            }
         }
 
-        // Update player power-ups
+        bulletsToRemove.forEach(bullets::remove);
+    }
+
+    private boolean isValidTarget(Player player, Bullet bullet) {
+        return player.isAlive() && 
+               !player.getId().equals(bullet.getOwnerId()) &&
+               Math.abs(bullet.getX() - player.getX()) < 20 &&
+               Math.abs(bullet.getY() - player.getY()) < 20;
+    }
+
+    private void handlePlayerHit(Player player, Bullet bullet) {
+        if (!player.hasShield()) {
+            player.setAlive(false);
+            player.setLastRespawnTime(System.currentTimeMillis());
+            player.setScore(player.getScore() - 1);
+
+            // Award point to shooter
+            Player shooter = players.get(bullet.getOwnerId());
+            if (shooter != null) {
+                shooter.setScore(shooter.getScore() + 1);
+            }
+
+            String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
+            broadcastMessage(hitMessage);
+        } else {
+            player.setShield(false);
+        }
+    }
+
+    private void checkPowerUpCollisions() {
+        for (Player player : players.values()) {
+            if (player.isAlive()) {
+                powerUps.entrySet().removeIf(entry -> {
+                    PowerUp powerUp = entry.getValue();
+                    if (Math.abs(powerUp.getX() - player.getX()) < 20 &&
+                        Math.abs(powerUp.getY() - player.getY()) < 20) {
+                        applyPowerUp(player, powerUp.getType());
+                        return true;
+                    }
+                    return false;
+                });
+            }
+        }
+    }
+
+    private void updatePowerUps() {
+        powerUps.entrySet().removeIf(entry -> entry.getValue().isExpired());
+
+        // Spawn power-ups randomly (0.5% chance per tick)
+        if (random.nextInt(1000) < 5) {
+            spawnPowerUp();
+        }
+    }
+
+    private void updatePlayerPowerUps() {
         long now = System.currentTimeMillis();
         for (Player player : players.values()) {
             if (player.hasShield() && now > player.getShieldEndTime()) {
@@ -121,68 +217,13 @@ public class GameRoom {
                 player.setDoubleFire(false);
             }
         }
-
-        // Respawn dead players
-        for (Player player : players.values()) {
-            if (!player.isAlive() && now - player.getLastRespawnTime() > 3000) { // 3 seconds
-                respawnPlayer(player);
-            }
-        }
-
-        // Broadcast update
-        broadcastUpdate();
     }
 
-    private void checkCollisions() {
-        List<String> bulletsToRemove = new ArrayList<>();
-        List<String> playersToHit = new ArrayList<>();
-
-        for (Bullet bullet : bullets.values()) {
-            for (Player player : players.values()) {
-                if (player.isAlive() && !player.getId().equals(bullet.getOwnerId())) {
-                    if (Math.abs(bullet.getX() - player.getX()) < 20 && Math.abs(bullet.getY() - player.getY()) < 20) {
-                        if (!player.hasShield()) {
-                            player.setAlive(false);
-                            player.setLastRespawnTime(System.currentTimeMillis());
-                            player.setScore(player.getScore() - 1);
-                            playersToHit.add(player.getId());
-
-                            // Award point to shooter
-                            Player shooter = players.get(bullet.getOwnerId());
-                            if (shooter != null) {
-                                shooter.setScore(shooter.getScore() + 1);
-                            }
-
-                            // Broadcast hit message
-                            String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
-                            broadcastMessage(hitMessage);
-                        } else {
-                            player.setShield(false);
-                        }
-                        bulletsToRemove.add(bullet.getId());
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Remove bullets
-        for (String bulletId : bulletsToRemove) {
-            bullets.remove(bulletId);
-        }
-
-        // Check power-up collection
+    private void respawnDeadPlayers() {
+        long now = System.currentTimeMillis();
         for (Player player : players.values()) {
-            if (player.isAlive()) {
-                powerUps.entrySet().removeIf(entry -> {
-                    PowerUp powerUp = entry.getValue();
-                    if (Math.abs(powerUp.getX() - player.getX()) < 20
-                            && Math.abs(powerUp.getY() - player.getY()) < 20) {
-                        applyPowerUp(player, powerUp.getType());
-                        return true;
-                    }
-                    return false;
-                });
+            if (!player.isAlive() && now - player.getLastRespawnTime() > RESPAWN_TIME_MS) {
+                respawnPlayer(player);
             }
         }
     }
@@ -192,15 +233,15 @@ public class GameRoom {
         switch (type) {
             case SHIELD:
                 player.setShield(true);
-                player.setShieldEndTime(now + 5000);
+                player.setShieldEndTime(now + SHIELD_DURATION_MS);
                 break;
             case SPEED_BOOST:
                 player.setSpeedBoost(true);
-                player.setSpeedBoostEndTime(now + 3000);
+                player.setSpeedBoostEndTime(now + SPEED_BOOST_DURATION_MS);
                 break;
             case DOUBLE_FIRE:
                 player.setDoubleFire(true);
-                player.setDoubleFireEndTime(now + 10000);
+                player.setDoubleFireEndTime(now + DOUBLE_FIRE_DURATION_MS);
                 break;
         }
     }
@@ -221,6 +262,8 @@ public class GameRoom {
         broadcastMessage(respawnMessage);
     }
 
+    // ========== Broadcasting ==========
+
     private void broadcastUpdate() {
         String updateMessage = JsonUtil.createUpdateMessage(
                 players.values(),
@@ -229,10 +272,6 @@ public class GameRoom {
         broadcastMessage(updateMessage);
     }
 
-    /**
-     * Broadcasts a message to all connected clients
-     * Demonstrates concurrent message distribution
-     */
     private void broadcastMessage(String message) {
         for (ClientHandler handler : clientHandlers.values()) {
             try {
@@ -240,50 +279,42 @@ public class GameRoom {
                     handler.sendMessage(message);
                 }
             } catch (Exception e) {
-                System.err.println("[GAME] Error broadcasting to client: " + e.getMessage());
+                System.err.println("[BROADCAST_ERROR] " + e.getMessage());
             }
         }
     }
 
-    /**
-     * Sends a message to a specific player
-     */
     public void sendToPlayer(String playerId, String message) {
         ClientHandler handler = clientHandlers.get(playerId);
         if (handler != null && handler.isConnected()) {
             try {
                 handler.sendMessage(message);
             } catch (Exception e) {
-                System.err.println("Error sending to player " + playerId + ": " + e.getMessage());
+                System.err.println("[SEND_ERROR] To player " + playerId.substring(0, 8) + ": " + e.getMessage());
             }
         }
     }
 
-    /**
-     * Starts the game loop in a separate thread
-     * Demonstrates multi-threading for game state updates
-     */
+    // ========== Game Loop ==========
+
     private void startGameLoop() {
         gameLoopThread = new Thread(() -> {
-            System.out.println("Game loop started");
+            System.out.println("[GAME_LOOP] Started (20 FPS, " + GAME_TICK_MS + "ms per frame)");
             while (gameRunning) {
-                updateGameState();
                 try {
-                    Thread.sleep(50); // 20 FPS (50ms per frame)
+                    updateGameState();
+                    Thread.sleep(GAME_TICK_MS);
                 } catch (InterruptedException e) {
-                    System.out.println("Game loop interrupted");
+                    System.out.println("[GAME_LOOP] Interrupted");
                     break;
                 }
             }
-            System.out.println("Game loop stopped");
+            System.out.println("[GAME_LOOP] Stopped");
         }, "GameLoop");
         gameLoopThread.setDaemon(false);
         gameLoopThread.start();
     }
 
-    /**
-     * Stops the game room and all related threads
-     */
     public void stop() {
         gameRunning = false;
         if (gameLoopThread != null) {

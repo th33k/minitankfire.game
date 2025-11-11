@@ -1,5 +1,9 @@
-package com.minitankfire;
+package com.minitankfire.model;
 
+/**
+ * Player model representing a tank in the game.
+ * Manages player state including position, health, and power-ups.
+ */
 public class Player {
     private String id;
     private String name;
