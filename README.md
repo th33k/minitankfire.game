@@ -1,4 +1,4 @@
-# 🎮 Mini Tank Fire: Online
+# 🎮 Mini Tank Fire: Pure Java Multiplayer Server
 
 A **pure Java network programming** implementation of a top-view multiplayer shooter game demonstrating core networking concepts for the IN 3111 - Network Programming module.
 
@@ -21,59 +21,67 @@ This project showcases **pure Java network programming** using only core Java AP
 
 📖 **See detailed documentation**: [NETWORK_PROGRAMMING_CONCEPTS.md](docs/NETWORK_PROGRAMMING_CONCEPTS.md)
 
-## ✨ Features
+### Building
+```bash
+cd server
+mvn clean compile
+```
 
-### 🎯 Core Gameplay
+### Running
+```bash
+cd server
+mvn exec:java
+```
 
-- **Real-time Multiplayer**: WebSocket-based synchronization at 20 FPS
-- **Smooth Tank Movement**: WASD controls with responsive aiming
-- **Combat System**: Click-to-fire with cooldown, collision detection
-- **Power-ups**: Shield, Speed Boost, Double Fire with visual effects
-- **Respawn Mechanics**: 3-second countdown with animated overlay
+### Testing
+```bash
+cd server
+mvn test
+```
 
-### 🎨 Professional UI/UX
-
-- **Modern HUD**: Health, kills, deaths, power-up indicators
-- **Live Leaderboard**: Real-time top 10 rankings
-- **Kill Feed**: Kill notifications with fade-out animations
-- **Minimap**: Real-time tactical overview
-- **Responsive Design**: Clean, neon-themed interface
-- **Visual Effects**: Particle explosions, screen shake, glowing elements
-- **Smooth Animations**: CSS transitions, fade-ins, slide effects
-
-### 🎤 Voice Chat
-
-- **WebRTC P2P**: Peer-to-peer voice communication
-- **Push-to-Talk**: Toggle microphone on/off
-- **Auto Configuration**: Echo cancellation, noise suppression
-- **Visual Indicators**: Microphone status icon
-- **Low Latency**: Direct peer connections
-
-### 💬 Enhanced Chat System
-
-- **Text Chat**: Real-time messaging between players
-- **Keyboard Shortcuts**: Enter to open, ESC to close
-- **Message History**: Scrollable chat with 20-message limit
-- **Sender Highlighting**: Color-coded player names
-- **Collapsible Panel**: Toggle chat visibility
-
-### 🎯 Game Features
-
-- **Power-up System**: 3 types with rotating animations
-- **Health Bars**: Visual health indicators above tanks
-- **Shield Effects**: Glowing border around protected tanks
-- **Bullet Trails**: Visual feedback for projectiles
-- **Speed Indicators**: Visual effect for speed boost
-- **Tank Customization**: Different colors for self/enemies
+### Configuration
+Edit `server/src/main/resources/config.properties`:
+```properties
+tcp.port=8080
+udp.port=8081
+nio.port=8082
+game.tick.rate=60
+max.players=100
+```
 
 ## 📚 Documentation
 
-- **[Network Programming Concepts](docs/NETWORK_PROGRAMMING_CONCEPTS.md)** - 🎓 **Complete guide to Java networking concepts used**
-- **[Quick Start Guide](docs/QUICKSTART.md)** - Step-by-step setup and first match checklist
-- **[Gameplay Guide](docs/GAMEPLAY.md)** - Detailed tactics, strategies, and advanced gameplay
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production server setup and scaling
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Setup and first game
+- **[Gameplay Guide](docs/GAMEPLAY.md)** - Game mechanics and strategies
+- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
 
-## �🚀 Quick Start
+## 🎯 Learning Objectives
+
+This project demonstrates:
+- **Core Java Networking**: TCP, UDP, NIO implementations
+- **Multithreading**: Thread pools, executors, synchronization
+- **Game Architecture**: Client-server model, game loops, state management
+- **Serialization**: Object transfer over networks
+- **Concurrent Programming**: Thread-safe data structures
+- **Real-time Systems**: Fixed update rates, broadcasting
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Implement your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+---
+
+**Built with Pure Java 21 - No External Dependencies**
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -88,10 +96,10 @@ This project showcases **pure Java network programming** using only core Java AP
 
 ```bash
 # Windows
-scripts\run.bat
+scripts\game.bat run
 
 # Linux/Mac
-./scripts/run.sh
+./scripts/game.sh run
 ```
 
 ✅ **Automatically starts both servers and opens browser!**
@@ -108,10 +116,10 @@ scripts\run.bat
 
    ```bash
    # Windows
-   scripts\build.bat
+   scripts\game.bat build
 
    # Linux/Mac
-   ./scripts/build.sh
+   ./scripts/game.sh build
    ```
 
 3. **Start the Server**

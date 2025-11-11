@@ -10,7 +10,7 @@ This guide covers deploying **Mini Tank Fire: Online** to production servers for
 
 ### Server Requirements
 - **OS**: Linux (Ubuntu 20.04+ recommended)
-- **Java**: OpenJDK 11 or higher
+- **Java**: OpenJDK 21
 - **RAM**: 2GB minimum (4GB recommended)
 - **CPU**: 2 cores minimum
 - **Storage**: 1GB
@@ -33,11 +33,11 @@ cd server
 mvn clean package
 ```
 
-This creates: `target/minitankfire-server-1.0-SNAPSHOT.jar`
+This creates: `target/tank-game-server-1.0-SNAPSHOT.jar`
 
 ### 2. Create Systemd Service
 
-Create `/etc/systemd/system/minitankfire.service`:
+Create `/etc/systemd/system/tank-game.service`:
 
 ```ini
 [Unit]
@@ -47,13 +47,13 @@ After=network.target
 [Service]
 Type=simple
 User=gameserver
-WorkingDirectory=/opt/minitankfire
-ExecStart=/usr/bin/java -jar /opt/minitankfire/minitankfire-server-1.0-SNAPSHOT.jar
+WorkingDirectory=/opt/tank-game
+ExecStart=/usr/bin/java -jar /opt/tank-game/tank-game-server-1.0-SNAPSHOT.jar
 Restart=always
 RestartSec=10
 StandardOutput=syslog
 StandardError=syslog
-SyslogIdentifier=minitankfire
+SyslogIdentifier=tank-game
 
 [Install]
 WantedBy=multi-user.target
@@ -66,17 +66,17 @@ WantedBy=multi-user.target
 sudo useradd -r -s /bin/false gameserver
 
 # Create directory
-sudo mkdir -p /opt/minitankfire
-sudo cp target/minitankfire-server-1.0-SNAPSHOT.jar /opt/minitankfire/
-sudo chown -R gameserver:gameserver /opt/minitankfire
+sudo mkdir -p /opt/tank-game
+sudo cp target/tank-game-server-1.0-SNAPSHOT.jar /opt/tank-game/
+sudo chown -R gameserver:gameserver /opt/tank-game
 
 # Enable and start service
 sudo systemctl daemon-reload
-sudo systemctl enable minitankfire
-sudo systemctl start minitankfire
+sudo systemctl enable tank-game
+sudo systemctl start tank-game
 
 # Check status
-sudo systemctl status minitankfire
+sudo systemctl status tank-game
 ```
 
 ### 4. Configure Firewall
@@ -94,9 +94,9 @@ sudo ufw allow 443/tcp
 
 ## 🌐 Client Deployment
 
-### 1. Update WebSocket URL
+### 1. Client Configuration
 
-Edit `client/js/game.js` line 309:
+The client includes a server address input field on the join screen. Users can enter the production server IP address there. No code changes are required.
 
 ```javascript
 // Change from

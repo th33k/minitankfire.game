@@ -16,8 +16,22 @@ class GameClient {
         this.mouseX = 0;
         this.mouseY = 0;
         this.angle = 0;
+        this.lastMoveTime = 0;
+        this.lastSentX = 0;
+        this.lastSentY = 0;
+        this.lastSentAngle = 0;
+        this.moveUpdateInterval = 50; // Send move updates max every 50ms
+        this.positionThreshold = 2; // Only send if moved more than 2 pixels
+        this.angleThreshold = 5; // Only send if angle changed more than 5 degrees
+        
+        // Firing properties
         this.lastFireTime = 0;
-        this.fireRate = 500; // ms between shots
+        this.fireRate = 250; // Fire rate in milliseconds
+        
+        // Performance optimization
+        this.gridDrawn = false;
+        this.lastGridDraw = 0;
+        this.lastHudUpdate = 0;
         
         // Stats
         this.kills = 0;
@@ -291,11 +305,14 @@ class GameClient {
     }
 
     joinGame(name) {
+        console.log('Joining game with name:', name);
         this.playerName = name;
         const serverAddress = document.getElementById('server-address').value.trim() || 'localhost';
-        this.ws = new WebSocket(`ws://${serverAddress}:8080/game`);
+        console.log('Connecting to WebSocket at:', `ws://${serverAddress}:8080`);
+        this.ws = new WebSocket(`ws://${serverAddress}:8080`);
         
         this.ws.onopen = () => {
+            console.log('WebSocket connection opened');
             this.sendMessage({ type: 'join', name: name });
             document.getElementById('join-screen').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
@@ -304,10 +321,12 @@ class GameClient {
         };
         
         this.ws.onmessage = (event) => {
+            console.log('Received WebSocket message:', event.data);
             this.handleMessage(JSON.parse(event.data));
         };
         
         this.ws.onclose = () => {
+            console.log('WebSocket connection closed');
             this.showNotification('Connection lost. Refreshing...', 'error');
             setTimeout(() => location.reload(), 3000);
         };
@@ -327,22 +346,106 @@ class GameClient {
     handleMessage(msg) {
         switch (msg.type) {
             case 'update':
-                this.players = {};
-                msg.players.forEach(p => {
-                    this.players[p.id] = p;
-                    if (p.id === this.playerId || (!this.playerId && p.name === this.playerName)) {
-                        this.playerId = p.id;
-                        this.myPlayer = p;
-                        this.health = p.alive ? 100 : 0;
-                        this.isAlive = p.alive;
+                // Handle delta updates for players
+                if (msg.players) {
+                    if (msg.players.full) {
+                        // Full update - replace all players
+                        this.players = {};
+                        msg.players.data.forEach(p => {
+                            this.players[p.id] = p;
+                            if (p.id === this.playerId || (!this.playerId && p.name === this.playerName)) {
+                                this.playerId = p.id;
+                                // Don't overwrite local player's position - only set reference and properties
+                                if (!this.myPlayer) {
+                                    this.myPlayer = p;
+                                } else {
+                                    // Update non-position properties
+                                    this.myPlayer.alive = p.alive;
+                                    this.myPlayer.shield = p.shield;
+                                    this.myPlayer.speedBoost = p.speedBoost;
+                                    this.myPlayer.doubleFire = p.doubleFire;
+                                    this.myPlayer.score = p.score;
+                                }
+                                this.health = p.alive ? 100 : 0;
+                                this.isAlive = p.alive;
+                            }
+                        });
+                    } else {
+                        // Delta update
+                        if (msg.players.added) {
+                            msg.players.added.forEach(p => {
+                                this.players[p.id] = p;
+                                if (p.id === this.playerId || (!this.playerId && p.name === this.playerName)) {
+                                    this.playerId = p.id;
+                                    // Don't overwrite local player's position - only set reference and properties
+                                    if (!this.myPlayer) {
+                                        this.myPlayer = p;
+                                    } else {
+                                        // Update non-position properties
+                                        this.myPlayer.alive = p.alive;
+                                        this.myPlayer.shield = p.shield;
+                                        this.myPlayer.speedBoost = p.speedBoost;
+                                        this.myPlayer.doubleFire = p.doubleFire;
+                                        this.myPlayer.score = p.score;
+                                    }
+                                    this.health = p.alive ? 100 : 0;
+                                    this.isAlive = p.alive;
+                                }
+                            });
+                        }
+                        
+                        if (msg.players.updated) {
+                            msg.players.updated.forEach(p => {
+                                this.players[p.id] = p;
+                                if (p.id === this.playerId) {
+                                    // Don't update local player's position from server - we do client-side prediction
+                                    // Only update non-position properties
+                                    this.myPlayer.alive = p.alive;
+                                    this.myPlayer.shield = p.shield;
+                                    this.myPlayer.speedBoost = p.speedBoost;
+                                    this.myPlayer.doubleFire = p.doubleFire;
+                                    this.myPlayer.score = p.score;
+                                    this.health = p.alive ? 100 : 0;
+                                    this.isAlive = p.alive;
+                                }
+                            });
+                        }
+                        
+                        if (msg.players.removed) {
+                            msg.players.removed.forEach(id => {
+                                delete this.players[id];
+                                if (id === this.playerId) {
+                                    this.myPlayer = null;
+                                    this.isAlive = false;
+                                }
+                            });
+                        }
                     }
-                });
+                }
                 
-                this.bullets = {};
-                msg.bullets.forEach(b => this.bullets[b.id] = b);
+                // Handle delta updates for bullets
+                if (msg.bullets) {
+                    if (msg.bullets.full) {
+                        // Full update - replace all bullets
+                        this.bullets = {};
+                        msg.bullets.data.forEach(b => this.bullets[b.id] = b);
+                    } else {
+                        // Delta update
+                        if (msg.bullets.added) {
+                            msg.bullets.added.forEach(b => this.bullets[b.id] = b);
+                        }
+                        
+                        if (msg.bullets.removed) {
+                            msg.bullets.removed.forEach(id => delete this.bullets[id]);
+                        }
+                    }
+                }
                 
+                // Power-ups (simplified for now)
                 this.powerUps = {};
-                msg.powerUps.forEach(pu => this.powerUps[pu.id] = pu);
+                if (msg.powerUps) {
+                    msg.powerUps.forEach(pu => this.powerUps[pu.id] = pu);
+                }
                 
                 this.updateHUD();
                 break;
@@ -409,13 +512,30 @@ class GameClient {
         x = Math.max(15, Math.min(1185, x));
         y = Math.max(15, Math.min(785, y));
 
-        if (x !== this.myPlayer.x || y !== this.myPlayer.y || this.angle !== this.myPlayer.angle) {
+        // Update local position immediately for smooth rendering
+        this.myPlayer.x = x;
+        this.myPlayer.y = y;
+        this.myPlayer.angle = this.angle;
+
+        // Throttle network updates
+        const currentTime = Date.now();
+        const timeSinceLastUpdate = currentTime - this.lastMoveTime;
+        const positionChanged = Math.abs(x - this.lastSentX) > this.positionThreshold || 
+                               Math.abs(y - this.lastSentY) > this.positionThreshold;
+        const angleChanged = Math.abs(this.angle - this.lastSentAngle) > this.angleThreshold;
+
+        if ((timeSinceLastUpdate >= this.moveUpdateInterval) && (positionChanged || angleChanged)) {
             this.sendMessage({ 
                 type: 'move', 
                 x: Math.round(x), 
                 y: Math.round(y), 
                 angle: Math.round(this.angle) 
             });
+            
+            this.lastSentX = x;
+            this.lastSentY = y;
+            this.lastSentAngle = this.angle;
+            this.lastMoveTime = currentTime;
         }
         
         // Auto-fire on space

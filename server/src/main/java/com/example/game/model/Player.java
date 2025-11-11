@@ -1,9 +1,15 @@
-package com.minitankfire;
+package com.example.game.model;
 
-public class Player {
+import java.io.Serializable;
+
+/**
+ * Represents a player in the game with position, score, and power-ups.
+ */
+public class Player extends GameObject {
+    private static final long serialVersionUID = 1L;
+
     private String id;
     private String name;
-    private int x, y;
     private int angle;
     private int score;
     private boolean alive;
@@ -16,6 +22,7 @@ public class Player {
     private long doubleFireEndTime;
 
     public Player(String id, String name) {
+        super(id, 0, 0); // Initialize with default position
         this.id = id;
         this.name = name;
         this.score = 0;
@@ -28,6 +35,7 @@ public class Player {
     // Getters and setters
     public String getId() { return id; }
     public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
     public int getX() { return x; }
     public void setX(int x) { this.x = x; }
     public int getY() { return y; }
@@ -52,4 +60,10 @@ public class Player {
     public void setDoubleFire(boolean doubleFire) { this.doubleFire = doubleFire; }
     public long getDoubleFireEndTime() { return doubleFireEndTime; }
     public void setDoubleFireEndTime(long doubleFireEndTime) { this.doubleFireEndTime = doubleFireEndTime; }
+
+    @Override
+    public void update() {
+        // Player position is updated externally via movement commands
+        // Power-up effects are handled in GameStateManager
+    }
 }
