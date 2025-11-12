@@ -1093,7 +1093,8 @@ kbd {
 /* Minimap */
 #minimap-container {
   bottom: 20px;
-  left: 20px;
+  /* place minimap to the right of the vertical heat bar (40px) plus a small gap */
+  left: calc(20px + 40px + 12px);
   width: 240px;
   z-index: 50;
 }
@@ -1637,7 +1638,8 @@ input:focus-visible + .toggle-slider {
 
   #minimap-container {
     bottom: 10px;
-    left: 10px;
+    /* on mobile, account for smaller heat bar (30px) and a small gap */
+    left: calc(10px + 30px + 8px);
     width: 150px;
   }
 
