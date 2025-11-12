@@ -1,4 +1,4 @@
-# 🎮 Gameplay Guide - Mini Tank Fire
+#  Gameplay Guide - Mini Tank Fire
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│  1200 pixels wide × 800 pixels tall     │
+│  1920 pixels wide × 1080 pixels tall     │
 │                                         │
 │  ┌─────────────────────────────────────┐│
 │  │                                     ││
@@ -106,7 +106,7 @@
 ```
 Your Tank (Green):
   ┌─────┐
-  │ 🎯  │ ← Turret rotates to mouse
+  │   │ ← Turret rotates to mouse
   │ │░│ │ ← Tank body
   └─────┘
 
@@ -208,7 +208,7 @@ When you have a Shield:
 
 ### Power-up Types
 
-#### 🛡️ Shield
+#### ️ Shield
 - **Duration**: 5 seconds
 - **Effect**: Absorb one hit without damage
 - **Visual**: Cyan glow around tank
@@ -220,7 +220,7 @@ When you have a Shield:
 - Hold ground more confidently
 - Still avoid multiple hits in short time
 
-#### ⚡ Speed Boost
+####  Speed Boost
 - **Duration**: 3 seconds
 - **Effect**: +50% movement speed
 - **Visual**: Yellow glow + trailing effect
@@ -232,7 +232,7 @@ When you have a Shield:
 - Chase fleeing enemies
 - Reposition quickly before speed decays
 
-#### 🔥 Double Fire
+####  Double Fire
 - **Duration**: 10 seconds
 - **Effect**: Fire 2 bullets per shot
 - **Spread**: ±45° from aim angle
@@ -414,7 +414,7 @@ With Double Fire Power-up:
 ├──────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────┐  │
 │  │                                              │  │
-│  │         GAME CANVAS (1200×800)               │  │
+│  │         GAME CANVAS (1920×1080)               │  │
 │  │                                              │  │
 │  │         [Your tank and enemy tanks]          │  │
 │  │                                              │  │
@@ -423,10 +423,10 @@ With Double Fire Power-up:
 │  Right Side:                      Left Side:       │
 │  ┌─────────────────┐             ┌──────────────┐ │
 │  │  POWER-UPS      │             │ LEADERBOARD  │ │
-│  │  ⚡ 3s left     │             │              │ │
-│  │  🛡️ 2s left     │             │ 🥇 Player2 8 │ │
-│  │                 │             │ 🥈 Player1 5 │ │
-│  │                 │             │ 🥉 You    3  │ │
+│  │   3s left     │             │              │ │
+│  │  ️ 2s left     │             │  Player2 8 │ │
+│  │                 │             │  Player1 5 │ │
+│  │                 │             │  You    3  │ │
 │  └─────────────────┘             │ 4. Player3 2 │ │
 │                                  │ 5. Player4 0 │ │
 │  Bottom Left:                    └──────────────┘ │
@@ -516,18 +516,18 @@ A: Yes! Click the microphone icon to toggle P2P voice.
 | Shield Duration | 5 seconds |
 | Speed Boost | +50% for 3 seconds |
 | Double Fire | 2 bullets for 10 seconds |
-| Map Width | 1200 pixels |
-| Map Height | 800 pixels |
+| Map Width | 1920 pixels |
+| Map Height | 1080 pixels |
 
 ---
 
 ## Conclusion
 
 **Mini Tank Fire** is about:
-- ✅ **Fast-paced action** - Constant combat
-- ✅ **Skill-based gameplay** - Positioning > luck
-- ✅ **Team cooperation** - Chat & coordination
-- ✅ **Strategic depth** - Power-up management
-- ✅ **Accessibility** - Easy to learn, hard to master
+-  **Fast-paced action** - Constant combat
+-  **Skill-based gameplay** - Positioning > luck
+-  **Team cooperation** - Chat & coordination
+-  **Strategic depth** - Power-up management
+-  **Accessibility** - Easy to learn, hard to master
 
-**Have fun and dominate the arena!** 🎮
+**Have fun and dominate the arena!** 

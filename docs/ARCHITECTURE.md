@@ -1,4 +1,4 @@
-# 🏗️ Project Architecture & Technical Design
+#  Project Architecture & Technical Design
 
 ## Table of Contents
 
@@ -80,18 +80,18 @@ The server is organized into **5 focused packages** for clarity and maintainabil
 
 ```
 com/minitankfire/
-├── server/          🖥️ Server bootstrap & lifecycle
+├── server/           Server bootstrap & lifecycle
 │   └── GameServer.java
-├── network/         🌐 Network & WebSocket protocol
+├── network/          Network & WebSocket protocol
 │   ├── WebSocketHandler.java
 │   └── ClientHandler.java
-├── game/            🎮 Game logic & state management
+├── game/             Game logic & state management
 │   └── GameRoom.java
-├── model/           📊 Game entity data structures
+├── model/            Game entity data structures
 │   ├── Player.java
 │   ├── Bullet.java
 │   └── PowerUp.java
-└── util/            🔧 Utility functions
+└── util/             Utility functions
     └── JsonUtil.java
 ```
 
@@ -210,8 +210,8 @@ private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
 **Game Constants** (Configurable):
 
 ```java
-MAP_WIDTH = 800                           // Canvas width
-MAP_HEIGHT = 600                          // Canvas height
+MAP_WIDTH = 1920                           // Canvas width
+MAP_HEIGHT = 1080                          // Canvas height
 PLAYER_SPEED = 3                          // pixels/frame
 BULLET_SPEED = 8                          // pixels/frame
 GAME_TICK_MS = 50                         // 20 FPS
@@ -411,8 +411,7 @@ Map<String, String> data = JsonUtil.parseJson(json);
 ### Frontend Stack
 
 **HTML** (`index.html`):
-
-- Canvas element (800×600) for game rendering
+- Canvas element (1920×1080) for game rendering
 - HUD panels (stats, leaderboard, chat)
 - Join screen overlay
 - Responsive layout
@@ -424,11 +423,17 @@ Map<String, String> data = JsonUtil.parseJson(json);
 - Responsive grid system
 - Smooth animations and transitions
 
-**JavaScript** (`game.js`):
+**JavaScript** (`game.js`, `game-client.js`, `core/`, `managers/`):
 
 #### GameClient Class
 
 **Main Controller** - orchestrates all client-side logic
+
+**Modular Architecture**:
+- **game.js**: Main GameClient class and core game loop
+- **game-client.js**: Client-side utilities and helpers
+- **core/**: Core systems (config, input, renderer)
+- **managers/**: Specialized managers (network, UI, voice chat)
 
 **Key Methods**:
 
@@ -742,7 +747,7 @@ private volatile boolean gameRunning = true;  // Visibility across threads
 | Voice      | WebRTC         | -       | P2P voice chat          |
 | Icons      | Font Awesome   | 6.4.0   | UI iconography          |
 
-**🎯 Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
+** Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
 
 ---
 
