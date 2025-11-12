@@ -15,17 +15,18 @@ import com.minitankfire.util.JsonUtil;
  */
 public class GameRoom {
     // Game constants
-    private static final int MAP_WIDTH = 800;
-    private static final int MAP_HEIGHT = 600;
-    private static final int PLAYER_SPEED = 3;
-    private static final int BULLET_SPEED = 8;
+    private static final int MAP_WIDTH = 1920;
+    private static final int MAP_HEIGHT = 1080;
+    private static final int PLAYER_SPEED = 12;
+    private static final int PLAYER_BOOST_SPEED = 20;
+    private static final int BULLET_SPEED = 50;
     private static final int GAME_TICK_MS = 50; // 20 FPS
     private static final int RESPAWN_TIME_MS = 3000;
     private static final int SHIELD_DURATION_MS = 5000;
     private static final int SPEED_BOOST_DURATION_MS = 3000;
     private static final int DOUBLE_FIRE_DURATION_MS = 10000;
     private static final int POWERUP_LIFETIME_MS = 10000;
-    private static final int BULLET_LIFETIME_MS = 3000;
+    private static final int BULLET_LIFETIME_MS = 1500;
 
     // Game state
     private Map<String, Player> players = new ConcurrentHashMap<>();
@@ -33,16 +34,27 @@ public class GameRoom {
     private Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
     private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
     private Random random = new Random();
-    
+
     // Game loop
     private volatile boolean gameRunning = false;
     private Thread gameLoopThread;
     private long gameStartTime;
+    private int winningScore = Integer.MAX_VALUE;
+    private volatile boolean gameOver = false;
 
     public GameRoom() {
         gameStartTime = System.currentTimeMillis();
         gameRunning = true;
         startGameLoop();
+    }
+
+    public void setWinningScore(int winningScore) {
+        this.winningScore = winningScore;
+        System.out.println("[GAME] Winning score configured: " + winningScore);
+    }
+
+    public String getLobbyInfo() {
+        return JsonUtil.createLobbyInfoMessage(players.values(), winningScore);
     }
 
     // ========== Player Management ==========
@@ -77,13 +89,51 @@ public class GameRoom {
         }
     }
 
-    public void handleFire(String playerId) {
+    public void handleFire(String playerId, Map<String, String> data) {
         Player player = players.get(playerId);
         if (player != null && player.isAlive()) {
-            createBullet(playerId, player);
+            int angle = player.getAngle();
+            int heatLevel = 0;
+            Integer mouseX = null;
+            Integer mouseY = null;
             
+            if (data != null) {
+                if (data.containsKey("angle")) {
+                    try {
+                        angle = Integer.parseInt(data.get("angle"));
+                    } catch (NumberFormatException e) {
+                        // Use player's angle
+                    }
+                }
+                if (data.containsKey("heatLevel")) {
+                    try {
+                        heatLevel = Integer.parseInt(data.get("heatLevel"));
+                    } catch (NumberFormatException e) {
+                        // Use default
+                    }
+                }
+                // Parse mouse coordinates
+                if (data.containsKey("mouseX")) {
+                    try {
+                        mouseX = Integer.parseInt(data.get("mouseX"));
+                    } catch (NumberFormatException e) {
+                        // Use angle-based trajectory
+                    }
+                }
+                if (data.containsKey("mouseY")) {
+                    try {
+                        mouseY = Integer.parseInt(data.get("mouseY"));
+                    } catch (NumberFormatException e) {
+                        // Use angle-based trajectory
+                    }
+                }
+            }
+            
+            createBullet(playerId, player, angle, heatLevel, mouseX, mouseY, 0);
+
             if (player.hasDoubleFire()) {
-                createBullet(playerId, player); // Fire second bullet
+                // Fire second bullet with slight offset to create dual fire effect
+                createBullet(playerId, player, angle, heatLevel, mouseX, mouseY, 15);
             }
         }
     }
@@ -96,13 +146,52 @@ public class GameRoom {
         }
     }
 
-    private void createBullet(String playerId, Player player) {
-        double rad = Math.toRadians(player.getAngle());
-        int dx = (int) (BULLET_SPEED * Math.cos(rad));
-        int dy = (int) (BULLET_SPEED * Math.sin(rad));
+    private void createBullet(String playerId, Player player, int angle) {
+        createBullet(playerId, player, angle, 0, null, null, 0);
+    }
+
+    private void createBullet(String playerId, Player player, int angle, int heatLevel) {
+        createBullet(playerId, player, angle, heatLevel, null, null, 0);
+    }
+
+    private void createBullet(String playerId, Player player, int angle, int heatLevel, Integer mouseX, Integer mouseY) {
+        createBullet(playerId, player, angle, heatLevel, mouseX, mouseY, 0);
+    }
+
+    private void createBullet(String playerId, Player player, int angle, int heatLevel, Integer mouseX, Integer mouseY, int angleOffset) {
+        int dx, dy;
+        
+        // If mouse coordinates are provided, calculate trajectory towards mouse position
+        if (mouseX != null && mouseY != null) {
+            // Calculate direction vector from player to mouse
+            double deltaX = mouseX - player.getX();
+            double deltaY = mouseY - player.getY();
+            double distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // Normalize and scale by bullet speed
+            if (distance > 0) {
+                dx = (int) ((deltaX / distance) * BULLET_SPEED);
+                dy = (int) ((deltaY / distance) * BULLET_SPEED);
+            } else {
+                // Fallback to angle-based calculation if mouse is exactly on player
+                double rad = Math.toRadians(angle + angleOffset);
+                dx = (int) (BULLET_SPEED * Math.cos(rad));
+                dy = (int) (BULLET_SPEED * Math.sin(rad));
+            }
+        } else {
+            // Fallback to angle-based calculation
+            double rad = Math.toRadians(angle + angleOffset);
+            dx = (int) (BULLET_SPEED * Math.cos(rad));
+            dy = (int) (BULLET_SPEED * Math.sin(rad));
+        }
 
         String bulletId = UUID.randomUUID().toString();
-        Bullet bullet = new Bullet(bulletId, playerId, player.getX(), player.getY(), dx, dy);
+        
+        // Calculate damage based on heat level
+        // Base damage is 25, increases with heat level up to 40 at max heat (100)
+        int damage = 25 + (heatLevel / 4); // 25 + up to 25 = 50 max damage
+        
+        Bullet bullet = new Bullet(bulletId, playerId, player.getX(), player.getY(), dx, dy, damage);
         bullets.put(bulletId, bullet);
     }
 
@@ -121,11 +210,11 @@ public class GameRoom {
         bullets.entrySet().removeIf(entry -> {
             Bullet bullet = entry.getValue();
             bullet.updatePosition();
-            
+
             // Remove if expired or out of bounds
-            if (bullet.isExpired() || 
-                bullet.getX() < 0 || bullet.getX() > MAP_WIDTH ||
-                bullet.getY() < 0 || bullet.getY() > MAP_HEIGHT) {
+            if (bullet.isExpired() ||
+                    bullet.getX() < 0 || bullet.getX() > MAP_WIDTH ||
+                    bullet.getY() < 0 || bullet.getY() > MAP_HEIGHT) {
                 return true;
             }
             return false;
@@ -154,10 +243,10 @@ public class GameRoom {
     }
 
     private boolean isValidTarget(Player player, Bullet bullet) {
-        return player.isAlive() && 
-               !player.getId().equals(bullet.getOwnerId()) &&
-               Math.abs(bullet.getX() - player.getX()) < 20 &&
-               Math.abs(bullet.getY() - player.getY()) < 20;
+        return player.isAlive() &&
+                !player.getId().equals(bullet.getOwnerId()) &&
+                Math.abs(bullet.getX() - player.getX()) < 20 &&
+                Math.abs(bullet.getY() - player.getY()) < 20;
     }
 
     private void handlePlayerHit(Player player, Bullet bullet) {
@@ -170,6 +259,10 @@ public class GameRoom {
             Player shooter = players.get(bullet.getOwnerId());
             if (shooter != null) {
                 shooter.setScore(shooter.getScore() + 1);
+                // Check winning condition
+                if (!gameOver && shooter.getScore() >= winningScore) {
+                    endGame(shooter);
+                }
             }
 
             String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
@@ -179,13 +272,23 @@ public class GameRoom {
         }
     }
 
+    private void endGame(Player winner) {
+        gameOver = true;
+        gameRunning = false; // stop game loop
+        System.out.println("[GAME] Game over! Winner: " + (winner != null ? winner.getName() : "unknown"));
+
+        // Build and broadcast game over message with leaderboard
+        String gameOverMsg = JsonUtil.createGameOverMessage(winner.getId(), winner.getName(), players.values());
+        broadcastMessage(gameOverMsg);
+    }
+
     private void checkPowerUpCollisions() {
         for (Player player : players.values()) {
             if (player.isAlive()) {
                 powerUps.entrySet().removeIf(entry -> {
                     PowerUp powerUp = entry.getValue();
                     if (Math.abs(powerUp.getX() - player.getX()) < 20 &&
-                        Math.abs(powerUp.getY() - player.getY()) < 20) {
+                            Math.abs(powerUp.getY() - player.getY()) < 20) {
                         applyPowerUp(player, powerUp.getType());
                         return true;
                     }
@@ -230,6 +333,11 @@ public class GameRoom {
 
     private void applyPowerUp(Player player, PowerUp.Type type) {
         long now = System.currentTimeMillis();
+        
+        // Track power-up collection for animation
+        player.setLastPowerUpCollectTime(now);
+        player.setLastPowerUpType(type.toString());
+        
         switch (type) {
             case SHIELD:
                 player.setShield(true);
@@ -248,9 +356,27 @@ public class GameRoom {
 
     private void spawnPowerUp() {
         String id = UUID.randomUUID().toString();
-        PowerUp.Type type = PowerUp.Type.values()[random.nextInt(PowerUp.Type.values().length)];
+        
+        // Weighted randomization for better variety
+        // Use weighted distribution: 30% Shield, 35% Speed Boost, 35% Double Fire
+        int randomValue = random.nextInt(100);
+        PowerUp.Type type;
+        if (randomValue < 30) {
+            type = PowerUp.Type.SHIELD;
+        } else if (randomValue < 65) {
+            type = PowerUp.Type.SPEED_BOOST;
+        } else {
+            type = PowerUp.Type.DOUBLE_FIRE;
+        }
+        
+        // Randomize spawn location with better distribution
         int x = random.nextInt(MAP_WIDTH);
         int y = random.nextInt(MAP_HEIGHT);
+        
+        // Avoid spawning too close to edges
+        x = Math.max(100, Math.min(MAP_WIDTH - 100, x));
+        y = Math.max(100, Math.min(MAP_HEIGHT - 100, y));
+        
         powerUps.put(id, new PowerUp(id, type, x, y));
     }
 

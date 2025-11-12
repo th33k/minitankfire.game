@@ -2,128 +2,207 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Tank Fire: Online</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Tank Arena - Real-time multiplayer tank battle arena game">
+    <meta name="theme-color" content="#00ff88">
+    <title>Tank Arena: Online</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="game-canvas" width="1200" height="800"></canvas>
+    <div id="game-container" role="main">
+        <canvas id="game-canvas" width="1920" height="1080" aria-label="Game battlefield canvas"></canvas>
         
         <!-- Join Screen -->
-        <div id="join-screen">
+        <div id="join-screen" role="dialog" aria-labelledby="game-title" aria-modal="true">
             <div class="join-content">
-                <h1 class="game-title">
-                    <i class="fas fa-chess-rook"></i> 
-                    MINI TANK FIRE
+                <h1 id="game-title" class="game-title">
+                    <i class="fas fa-chess-rook" aria-hidden="true"></i> 
+                    TANK ARENA
                 </h1>
                 <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
-                <div class="join-form">
-                    <input type="text" id="server-address" placeholder="Server address (e.g., 192.168.1.100)" value="localhost">
-                    <input type="text" id="player-name" placeholder="Enter your callsign" maxlength="20" autofocus>
-                    <button id="join-btn" class="btn-primary">
-                        <i class="fas fa-play"></i> Deploy to Battle
+                <form class="join-form" id="join-form">
+                    <div class="input-group">
+                        <label for="server-address" class="visually-hidden">Server Address</label>
+                        <input 
+                            type="text" 
+                            id="server-address" 
+                            placeholder="Server address (e.g., localhost)" 
+                            value="localhost"
+                            aria-label="Server address"
+                            aria-required="true"
+                            autocomplete="off">
+                        <span class="input-icon"><i class="fas fa-server" aria-hidden="true"></i></span>
+                    </div>
+                    <div class="input-group">
+                        <label for="player-name" class="visually-hidden">Player Name</label>
+                        <input 
+                            type="text" 
+                            id="player-name" 
+                            placeholder="Enter your callsign" 
+                            maxlength="20" 
+                            autofocus
+                            aria-label="Player name or callsign"
+                            aria-required="true"
+                            aria-describedby="name-requirements"
+                            autocomplete="off">
+                        <span class="input-icon"><i class="fas fa-user" aria-hidden="true"></i></span>
+                    </div>
+                    <small id="name-requirements" class="input-hint">Maximum 20 characters</small>
+                    <button id="join-btn" class="btn-primary" type="submit" aria-label="Join game">
+                        <i class="fas fa-play" aria-hidden="true"></i> 
+                        <span>Deploy to Battle</span>
+                        <span class="btn-loader" aria-hidden="true"></span>
                     </button>
+                </form>
+                <div class="game-info" role="list" aria-label="Game controls">
+                    <div class="info-item" role="listitem">
+                        <i class="fas fa-keyboard" aria-hidden="true"></i>
+                        <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span>
+                    </div>
+                    <div class="info-item" role="listitem">
+                        <i class="fas fa-mouse-pointer" aria-hidden="true"></i>
+                        <span>Mouse Aim & Shoot</span>
+                    </div>
+                    <div class="info-item" role="listitem">
+                        <i class="fas fa-comments" aria-hidden="true"></i>
+                        <span><kbd>Enter</kbd> Chat</span>
+                    </div>
                 </div>
-                <div class="game-info">
-                    <div class="info-item">
-                        <i class="fas fa-keyboard"></i>
-                        <span>WASD - Move</span>
+            </div>
+        </div>
+        
+        <!-- Lobby Screen (Second Screen - after Deploy to Battle) -->
+        <div id="lobby-screen" style="display: none;">
+            <div class="lobby-content">
+                <h1 class="game-title">
+                    <i class="fas fa-chess-rook"></i> 
+                    TANK ARENA
+                </h1>
+                <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
+                
+                <div class="lobby-info">
+                    <div class="info-card">
+                        <i class="fas fa-trophy"></i>
+                        <div class="info-label">Winning Score</div>
+                        <div id="lobby-winning-score" class="info-value">10</div>
                     </div>
-                    <div class="info-item">
-                        <i class="fas fa-mouse-pointer"></i>
-                        <span>Mouse - Aim & Shoot</span>
+                    <div class="info-card">
+                        <i class="fas fa-users"></i>
+                        <div class="info-label">Players Online</div>
+                        <div id="lobby-player-count" class="info-value">0</div>
                     </div>
-                    <div class="info-item">
-                        <i class="fas fa-comments"></i>
-                        <span>Enter - Chat</span>
+                </div>
+
+                <div class="lobby-leaderboard">
+                    <h3><i class="fas fa-medal"></i> Current Leaderboard</h3>
+                    <div id="lobby-scores">
+                        <p class="no-players">No players in the game lobby</p>
                     </div>
+                </div>
+
+                <div class="lobby-actions">
+                    <button id="lobby-join-btn" class="btn-primary">
+                        <i class="fas fa-gamepad"></i> Join Game
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Game HUD -->
-        <div id="game-hud" style="display: none;">
+        <div id="game-hud" style="display: none;" role="complementary" aria-label="Game interface">
+            <!-- Vertical Heat Bar (Left Side) -->
+            <div id="heat-bar-vertical" role="meter" aria-label="Weapon heat level" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+
             <!-- Top Bar -->
             <div id="top-bar">
                 <div class="hud-section">
-                    <div id="player-stats">
+                    <div id="player-stats" role="group" aria-label="Player statistics">
                         <div class="stat-item">
-                            <i class="fas fa-heart"></i>
-                            <span id="health-text">100</span>
+                            <i class="fas fa-heart" aria-hidden="true"></i>
+                            <span id="health-text" aria-label="Health">100</span>
                         </div>
                         <div class="stat-item">
-                            <i class="fas fa-crosshairs"></i>
-                            <span id="kills-text">0</span>
+                            <i class="fas fa-crosshairs" aria-hidden="true"></i>
+                            <span id="kills-text" aria-label="Kills">0</span>
                         </div>
                         <div class="stat-item">
-                            <i class="fas fa-skull"></i>
-                            <span id="deaths-text">0</span>
+                            <i class="fas fa-skull" aria-hidden="true"></i>
+                            <span id="deaths-text" aria-label="Deaths">0</span>
                         </div>
                     </div>
                 </div>
                 <div class="hud-section center">
-                    <div id="power-up-indicator"></div>
+                    <div id="power-up-indicator" role="status" aria-label="Active power-ups"></div>
                 </div>
                 <div class="hud-section">
-                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat">
-                        <i class="fas fa-microphone"></i>
+                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat" aria-label="Toggle voice chat" aria-pressed="false">
+                        <i class="fas fa-microphone" aria-hidden="true"></i>
                     </button>
-                    <button id="settings-btn" class="icon-btn" title="Settings">
-                        <i class="fas fa-cog"></i>
+                    <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Open settings" aria-haspopup="dialog">
+                        <i class="fas fa-cog" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Leaderboard -->
-            <div id="leaderboard" class="panel">
+            <div id="leaderboard" class="panel" role="region" aria-label="Leaderboard">
                 <div class="panel-header">
-                    <i class="fas fa-trophy"></i> LEADERBOARD
+                    <i class="fas fa-trophy" aria-hidden="true"></i> LEADERBOARD
                 </div>
-                <div id="scores" class="panel-content"></div>
+                <div id="scores" class="panel-content" role="list"></div>
             </div>
 
             <!-- Kill Feed -->
-            <div id="kill-feed"></div>
+            <div id="kill-feed" role="log" aria-label="Kill feed" aria-live="polite"></div>
 
             <!-- Chat System -->
-            <div id="chat-panel" class="panel">
+            <div id="chat-panel" class="panel" role="region" aria-label="Chat">
                 <div class="panel-header">
-                    <i class="fas fa-comments"></i> TEAM CHAT
-                    <button id="chat-toggle" class="icon-btn-small">
-                        <i class="fas fa-minus"></i>
+                    <i class="fas fa-comments" aria-hidden="true"></i> TEAM CHAT
+                    <button id="chat-toggle" class="icon-btn-small" aria-label="Toggle chat" aria-pressed="true">
+                        <i class="fas fa-minus" aria-hidden="true"></i>
                     </button>
                 </div>
-                <div id="chat-messages" class="panel-content"></div>
+                <div id="chat-messages" class="panel-content" role="log" aria-live="polite" aria-atomic="false"></div>
                 <div class="chat-input-wrapper">
-                    <input type="text" id="chat-input" placeholder="Press Enter to chat..." maxlength="100">
-                    <button id="send-btn" class="icon-btn-small">
-                        <i class="fas fa-paper-plane"></i>
+                    <label for="chat-input" class="visually-hidden">Chat message</label>
+                    <input type="text" id="chat-input" placeholder="Press Enter to chat..." maxlength="100" aria-label="Type chat message">
+                    <button id="send-btn" class="icon-btn-small" aria-label="Send message">
+                        <i class="fas fa-paper-plane" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
 
             <!-- Minimap -->
-            <div id="minimap-container" class="panel">
+            <div id="minimap-container" class="panel" role="region" aria-label="Minimap">
                 <div class="panel-header">MAP</div>
-                <canvas id="minimap" width="200" height="150"></canvas>
+                <canvas id="minimap" width="200" height="150" aria-label="Game map overview"></canvas>
             </div>
 
             <!-- Respawn Overlay -->
-            <div id="respawn-overlay" style="display: none;">
+            <div id="respawn-overlay" style="display: none;" role="alert" aria-live="assertive">
                 <div class="respawn-content">
-                    <i class="fas fa-skull-crossbones"></i>
+                    <i class="fas fa-skull-crossbones" aria-hidden="true"></i>
                     <h2>ELIMINATED</h2>
-                    <p>Respawning in <span id="respawn-timer">3</span>s...</p>
+                    <p>Respawning in <span id="respawn-timer" aria-live="polite">3</span>s...</p>
                 </div>
             </div>
         </div>
 
         <!-- Notifications -->
-        <div id="notifications"></div>
+        <div id="notifications" role="status" aria-live="polite" aria-atomic="true"></div>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" style="display: none;" role="status" aria-label="Loading">
+            <div class="loading-content">
+                <div class="loader"></div>
+                <p id="loading-text">Connecting to server...</p>
+            </div>
+        </div>
     </div>
 
-    <script src="js/game.js"></script>
+    <script type="module" src="js/game-client.js"></script>
 </body>
 </html>

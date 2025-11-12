@@ -63,8 +63,8 @@
 cd /path/to/projects
 
 # Clone the repository
-git clone https://github.com/th33k/Tank-Game.git
-cd Tank-Game
+git clone https://github.com/th33k/minitankfire.game.git
+cd minitankfire.game
 
 # Switch to development branch (if not on it)
 git checkout dev
@@ -183,11 +183,9 @@ docker run -p 8080:8080 -p 3000:3000 tank-game
 ### New Organized Structure
 
 ```
-Tank-Game/
+minitankfire.game/
 ├── Makefile                                    # Build automation
 ├── README.md                                   # Main documentation
-├── RESTRUCTURING_SUMMARY.md                    # Restructuring guide
-├── SERVER_STRUCTURE.md                         # Server architecture details
 ├── .gitignore                                  # Git ignore rules
 │
 ├── client/                                     # Frontend (HTML/CSS/JS)
@@ -195,7 +193,16 @@ Tank-Game/
 │   ├── css/
 │   │   └── style.css                           # Game styling (neon theme)
 │   └── js/
-│       └── game.js                             # Game client logic
+│       ├── game.js                             # Main game client logic
+│       ├── game-client.js                      # Game client utilities
+│       ├── core/                               # Core game systems
+│       │   ├── config.js                       # Game configuration
+│       │   ├── input-manager.js                # Input handling
+│       │   └── renderer.js                     # Rendering system
+│       └── managers/                           # Game managers
+│           ├── network-manager.js              # Network communication
+│           ├── ui-manager.js                   # UI management
+│           └── voice-chat-manager.js           # Voice chat system
 │
 ├── server/                                     # Backend (Java)
 │   ├── pom.xml                                 # Maven configuration
@@ -217,14 +224,15 @@ Tank-Game/
 │
 ├── docs/                                       # Documentation
 │   ├── ARCHITECTURE.md                         # Technical design
-│   ├── ARCHITECTURE.md                 # Updated with new structure
 │   ├── GAMEPLAY.md                             # Game guide
 │   ├── DEVELOPMENT.md                          # This file
-│   └── DEPLOYMENT.md                           # Production setup
+│   └── report/                                 # Project reports
+│       ├── PROJECT_REPORT.md                   # Project report
+│       └── TEAM_CONTRIBUTIONS.md               # Team contributions
 │
 └── .github/
-    ├── workflows/                              # CI/CD pipelines
-    └── ISSUE_TEMPLATE/                         # Issue templates
+    └── workflows/                              # CI/CD pipelines
+        └── deploy.yml                          # Deployment workflow
 ```
 
 ### Package Responsibilities
@@ -512,14 +520,29 @@ Serialization layer:
 #### game.js (Main Controller)
 ```javascript
 class GameClient {
-  init()                  // Initialize
-  connect()               // WebSocket
-  handleMessage()         // Message router
-  update()                // Game loop
-  render()                // Drawing
+  constructor()           // Initialize game state
+  init()                  // Setup event listeners and screens
+  connect()               // WebSocket connection
+  handleMessage()         // Process server messages
+  update()                // Update game state (60 FPS)
+  render()                // Draw to canvas
   // ... more methods
 }
 ```
+
+#### game-client.js (Client Utilities)
+- Helper functions for game client
+- Utility methods and constants
+
+#### core/ Directory
+- **config.js**: Game configuration and constants
+- **input-manager.js**: Keyboard and mouse input handling
+- **renderer.js**: Rendering utilities and functions
+
+#### managers/ Directory
+- **network-manager.js**: WebSocket communication management
+- **ui-manager.js**: User interface management
+- **voice-chat-manager.js**: WebRTC voice chat functionality
 
 ---
 

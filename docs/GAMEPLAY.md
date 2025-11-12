@@ -38,7 +38,7 @@
 
 ```
 ┌─────────────────────────────────────────┐
-│  1200 pixels wide × 800 pixels tall     │
+│  1920 pixels wide × 1080 pixels tall     │
 │                                         │
 │  ┌─────────────────────────────────────┐│
 │  │                                     ││
@@ -414,7 +414,7 @@ With Double Fire Power-up:
 ├──────────────────────────────────────────────────────┤
 │  ┌──────────────────────────────────────────────┐  │
 │  │                                              │  │
-│  │         GAME CANVAS (1200×800)               │  │
+│  │         GAME CANVAS (1920×1080)               │  │
 │  │                                              │  │
 │  │         [Your tank and enemy tanks]          │  │
 │  │                                              │  │
@@ -516,8 +516,8 @@ A: Yes! Click the microphone icon to toggle P2P voice.
 | Shield Duration | 5 seconds |
 | Speed Boost | +50% for 3 seconds |
 | Double Fire | 2 bullets for 10 seconds |
-| Map Width | 1200 pixels |
-| Map Height | 800 pixels |
+| Map Width | 1920 pixels |
+| Map Height | 1080 pixels |
 
 ---
 

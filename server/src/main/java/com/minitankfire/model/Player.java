@@ -18,6 +18,8 @@ public class Player {
     private long speedBoostEndTime;
     private boolean doubleFire;
     private long doubleFireEndTime;
+    private long lastPowerUpCollectTime;
+    private String lastPowerUpType;
 
     public Player(String id, String name) {
         this.id = id;
@@ -27,6 +29,8 @@ public class Player {
         this.hasShield = false;
         this.speedBoost = false;
         this.doubleFire = false;
+        this.lastPowerUpCollectTime = 0;
+        this.lastPowerUpType = null;
     }
 
     // Getters and setters
@@ -56,4 +60,10 @@ public class Player {
     public void setDoubleFire(boolean doubleFire) { this.doubleFire = doubleFire; }
     public long getDoubleFireEndTime() { return doubleFireEndTime; }
     public void setDoubleFireEndTime(long doubleFireEndTime) { this.doubleFireEndTime = doubleFireEndTime; }
+    
+    // Power-up collection tracking for animations
+    public long getLastPowerUpCollectTime() { return lastPowerUpCollectTime; }
+    public void setLastPowerUpCollectTime(long lastPowerUpCollectTime) { this.lastPowerUpCollectTime = lastPowerUpCollectTime; }
+    public String getLastPowerUpType() { return lastPowerUpType; }
+    public void setLastPowerUpType(String lastPowerUpType) { this.lastPowerUpType = lastPowerUpType; }
 }

@@ -188,8 +188,8 @@ private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
 
 **Game Constants** (Configurable):
 ```java
-MAP_WIDTH = 800                           // Canvas width
-MAP_HEIGHT = 600                          // Canvas height
+MAP_WIDTH = 1920                           // Canvas width
+MAP_HEIGHT = 1080                          // Canvas height
 PLAYER_SPEED = 3                          // pixels/frame
 BULLET_SPEED = 8                          // pixels/frame
 GAME_TICK_MS = 50                         // 20 FPS
@@ -377,7 +377,7 @@ Map<String, String> data = JsonUtil.parseJson(json);
 ### Frontend Stack
 
 **HTML** (`index.html`):
-- Canvas element (800×600) for game rendering
+- Canvas element (1920×1080) for game rendering
 - HUD panels (stats, leaderboard, chat)
 - Join screen overlay
 - Responsive layout
@@ -388,11 +388,17 @@ Map<String, String> data = JsonUtil.parseJson(json);
 - Responsive grid system
 - Smooth animations and transitions
 
-**JavaScript** (`game.js`):
+**JavaScript** (`game.js`, `game-client.js`, `core/`, `managers/`):
 
 #### GameClient Class
 
 **Main Controller** - orchestrates all client-side logic
+
+**Modular Architecture**:
+- **game.js**: Main GameClient class and core game loop
+- **game-client.js**: Client-side utilities and helpers
+- **core/**: Core systems (config, input, renderer)
+- **managers/**: Specialized managers (network, UI, voice chat)
 
 **Key Methods**:
 ```javascript

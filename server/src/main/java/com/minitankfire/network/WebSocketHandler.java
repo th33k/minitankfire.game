@@ -40,6 +40,7 @@ public class WebSocketHandler {
         // Read HTTP request
         String line = reader.readLine();
         if (line == null || !line.contains("GET")) {
+            System.err.println("[HANDSHAKE] Invalid request line: " + line);
             return false;
         }
 
@@ -54,14 +55,21 @@ public class WebSocketHandler {
             }
         }
 
+        // Debug: print received headers
+        System.out.println("[HANDSHAKE] Received headers:");
+        headers.forEach((k, v) -> System.out.println("  " + k + ": " + v));
+
         // Verify WebSocket upgrade request
         String upgrade = headers.get("upgrade");
         String connection = headers.get("connection");
         String key = headers.get("sec-websocket-key");
 
+        System.out.println("[HANDSHAKE] upgrade=" + upgrade + ", connection=" + connection + ", key=" + (key != null ? "present" : "null"));
+
         if (upgrade == null || !upgrade.equalsIgnoreCase("websocket") ||
                 connection == null || !connection.toLowerCase().contains("upgrade") ||
                 key == null) {
+            System.err.println("[HANDSHAKE] Validation failed - Missing or invalid headers");
             return false;
         }
 
