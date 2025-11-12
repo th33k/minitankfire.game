@@ -11,8 +11,46 @@
     <div id="game-container">
         <canvas id="game-canvas" width="1200" height="800"></canvas>
         
+        <!-- Lobby Screen -->
+        <div id="lobby-screen">
+            <div class="lobby-content">
+                <h1 class="game-title">
+                    <i class="fas fa-chess-rook"></i> 
+                    MINI TANK FIRE
+                </h1>
+                <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
+                
+                <div class="lobby-info">
+                    <div class="info-card">
+                        <i class="fas fa-trophy"></i>
+                        <div class="info-label">Winning Score</div>
+                        <div id="lobby-winning-score" class="info-value">10</div>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-users"></i>
+                        <div class="info-label">Players Online</div>
+                        <div id="lobby-player-count" class="info-value">0</div>
+                    </div>
+                </div>
+
+                <div class="lobby-leaderboard">
+                    <h3><i class="fas fa-medal"></i> Current Leaderboard</h3>
+                    <div id="lobby-scores">
+                        <p class="no-players">No players in the game lobby</p>
+                    </div>
+                </div>
+
+                <div class="lobby-actions">
+                    <input type="text" id="lobby-server-address" placeholder="Server address (e.g., 192.168.1.100)" value="localhost">
+                    <button id="lobby-join-btn" class="btn-primary">
+                        <i class="fas fa-gamepad"></i> Join Game
+                    </button>
+                </div>
+            </div>
+        </div>
+        
         <!-- Join Screen -->
-        <div id="join-screen">
+        <div id="join-screen" style="display: none;">
             <div class="join-content">
                 <h1 class="game-title">
                     <i class="fas fa-chess-rook"></i> 

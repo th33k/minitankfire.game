@@ -6,6 +6,7 @@ class GameClient {
         this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
         
         this.ws = null;
+        this.lobbyWs = null;
         this.playerId = null;
         this.myPlayer = null;
         this.players = {};
@@ -41,6 +42,7 @@ class GameClient {
 
     init() {
         this.setupEventListeners();
+        this.setupLobbyScreen();
         this.setupJoinScreen();
         this.initVoiceChat();
     }
@@ -118,6 +120,106 @@ class GameClient {
                 document.querySelector('.chat-input-wrapper').style.display = this.chatOpen ? 'flex' : 'none';
             });
         }
+    }
+
+    setupLobbyScreen() {
+        document.getElementById('lobby-join-btn').addEventListener('click', () => {
+            this.showJoinScreen();
+        });
+        
+        // Connect to server to get lobby info
+        this.connectToLobby();
+    }
+
+    connectToLobby() {
+        const serverAddress = document.getElementById('lobby-server-address').value.trim() || 'localhost';
+        
+        try {
+            this.lobbyWs = new WebSocket(`ws://${serverAddress}:8080/game`);
+            
+            this.lobbyWs.onopen = () => {
+                // Request lobby information
+                this.sendLobbyMessage({ type: 'lobby_info' });
+            };
+            
+            this.lobbyWs.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'lobby_info') {
+                    this.updateLobbyDisplay(msg);
+                }
+            };
+            
+            this.lobbyWs.onerror = (error) => {
+                console.log('Lobby connection error:', error);
+                document.getElementById('lobby-player-count').textContent = '?';
+            };
+            
+            this.lobbyWs.onclose = () => {
+                // Retry connection after 3 seconds
+                setTimeout(() => {
+                    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                        this.connectToLobby();
+                    }
+                }, 3000);
+            };
+        } catch (error) {
+            console.log('Could not connect to lobby:', error);
+        }
+    }
+
+    sendLobbyMessage(msg) {
+        if (this.lobbyWs && this.lobbyWs.readyState === WebSocket.OPEN) {
+            this.lobbyWs.send(JSON.stringify(msg));
+        }
+    }
+
+    updateLobbyDisplay(msg) {
+        // Update winning score
+        if (msg.winningScore) {
+            document.getElementById('lobby-winning-score').textContent = msg.winningScore;
+        }
+        
+        // Update player count
+        document.getElementById('lobby-player-count').textContent = msg.playerCount || 0;
+        
+        // Update leaderboard
+        const scoresDiv = document.getElementById('lobby-scores');
+        
+        if (!msg.players || msg.players.length === 0) {
+            scoresDiv.innerHTML = '<p class="no-players">No players in the game lobby</p>';
+        } else {
+            scoresDiv.innerHTML = msg.players
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10)
+                .map((p, index) => `
+                    <div class="lobby-score-item">
+                        <span class="lobby-score-rank">#${index + 1}</span>
+                        <span class="lobby-score-name">${p.name}</span>
+                        <span class="lobby-score-value">${p.score}</span>
+                    </div>
+                `).join('');
+        }
+    }
+
+    showJoinScreen() {
+        // Close lobby connection
+        if (this.lobbyWs) {
+            this.lobbyWs.close();
+            this.lobbyWs = null;
+        }
+        
+        // Transfer server address
+        const serverAddress = document.getElementById('lobby-server-address').value;
+        document.getElementById('server-address').value = serverAddress;
+        
+        // Hide lobby, show join screen
+        document.getElementById('lobby-screen').style.display = 'none';
+        document.getElementById('join-screen').style.display = 'flex';
+        
+        // Focus on player name input
+        setTimeout(() => {
+            document.getElementById('player-name').focus();
+        }, 100);
     }
 
     setupJoinScreen() {
