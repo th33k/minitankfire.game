@@ -1,2 +1,10 @@
 name: tank-game-server
 description: Tank Game multiplayer server - WebSocket-based real-time multiplayer tank battles
+
+# Component implementation details - Docker-based deployment
+implementation:
+  type: Dockerfile
+  dockerfile: server/Dockerfile
+  context: server
+  container:
+    image: tank-game-server:latest
