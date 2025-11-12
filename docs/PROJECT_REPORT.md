@@ -27,59 +27,16 @@ The game implements a complete WebSocket-based communication system from scratch
 
 ### Main Features
 
-#### 🎮 Core Gameplay Features
+Key features (high-level):
 
-- **Real-time Multiplayer Combat**: Up to 100 simultaneous players can join the game, controlling tanks in a 1920×1080 arena with smooth movement and responsive controls.
-
-- **Weapons System**: Click-to-fire combat mechanism with bullet trajectory calculation, collision detection, heat-based damage system (25-50 damage points), and visual feedback for hits and kills.
-
-- **Power-up System**: Three types of collectible power-ups spawn randomly across the map:
-
-  - **Shield** (5 seconds) - Blocks one incoming hit
-  - **Speed Boost** (3 seconds) - Increases movement speed by 67%
-  - **Double Fire** (10 seconds) - Fires two bullets simultaneously
-
-- **Respawn Mechanics**: Automatic 3-second respawn timer after death with random spawn location to prevent spawn camping.
-
-- **Scoring System**: Dynamic scoring with +1 for kills, -1 for deaths, and configurable winning score threshold (default: 10 points).
-
-#### 🌐 Network Features
-
-- **WebSocket Protocol**: Custom implementation of RFC 6455 WebSocket protocol for bidirectional, full-duplex communication over TCP port 8080.
-
-- **Multi-threaded Server**: Thread pool architecture (ExecutorService) managing up to 100 concurrent client connections with dedicated threads per client.
-
-- **Real-time State Synchronization**: 20 FPS server game loop broadcasts complete game state (players, bullets, power-ups) to all connected clients.
-
-- **Low Latency Communication**: TCP NoDelay (disables Nagle's algorithm) for reduced latency, WebSocket binary framing for efficient data transfer.
-
-#### 💬 Communication Features
-
-- **Text Chat System**: Real-time messaging between all players with message history, sender highlighting, and collapsible chat panel.
-
-- **Voice Chat (WebRTC)**: Peer-to-peer voice communication with push-to-talk functionality, automatic echo cancellation and noise suppression, and visual microphone status indicators.
-
-#### 🎨 User Interface Features
-
-- **Modern HUD**: Real-time display of health, kills, deaths, score, and active power-up indicators.
-
-- **Live Leaderboard**: Top 10 rankings updated in real-time with player names and scores.
-
-- **Kill Feed**: Scrolling notification system showing recent eliminations with fade-out animations.
-
-- **Minimap**: Tactical overview showing player positions and map boundaries.
-
-- **Lobby System**: Pre-game lobby displaying current player count, winning score configuration, and game status.
-
-#### 🔧 Technical Features
-
-- **Pure Java Server**: No external networking frameworks—only core Java APIs (java.net, java.io, java.util.concurrent).
-
-- **Custom JSON Serialization**: Hand-coded JSON parser and serializer without external dependencies (no Gson, no Jackson).
-
-- **Thread-Safe State Management**: ConcurrentHashMap for concurrent access to game entities, atomic operations for score updates, volatile flags for game state control.
-
-- **Graceful Shutdown**: Proper resource cleanup with shutdown hooks, thread pool termination with timeout, socket closure and connection cleanup.
+- Real-time multiplayer combat with authoritative Java server and up to 100 concurrent players
+- Responsive click-to-fire weapons, bullet physics and collision handling
+- Power-ups (shield, speed boost, double fire) and automatic respawn mechanics
+- Real-time state synchronization at 20 FPS with low-latency TCP/WebSocket transport
+- Built-in text chat and optional peer-to-peer voice chat (WebRTC)
+- Modern HUD, live leaderboard and lobby system for pre-game setup
+- Pure-Java server implementation with custom JSON serialization and thread-safe state management
+- Graceful shutdown and resource cleanup
 
 ---
 
