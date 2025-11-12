@@ -1,10 +1,10 @@
-# 🎮 Mini Tank Fire: Online
+#  Mini Tank Fire: Online
 
 A **pure Java network programming** implementation of a real-time multiplayer shooter game demonstrating core networking concepts for the IN 3111 - Network Programming module.
 
 ---
 
-## 📋 Table of Contents
+##  Table of Contents
 
 - [Features](#-features)
 - [Quick Start](#-quick-start)
@@ -19,9 +19,9 @@ A **pure Java network programming** implementation of a real-time multiplayer sh
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🎯 Core Gameplay
+###  Core Gameplay
 
 - **Real-time Multiplayer**: WebSocket-based synchronization at 20 FPS
 - **Smooth Tank Movement**: WASD controls with responsive aiming
@@ -29,7 +29,7 @@ A **pure Java network programming** implementation of a real-time multiplayer sh
 - **Power-ups**: Shield, Speed Boost, Double Fire with visual effects
 - **Respawn Mechanics**: 3-second countdown with animated overlay
 
-### 🎨 Professional UI/UX
+###  Professional UI/UX
 
 - **Modern HUD**: Health, kills, deaths, power-up indicators
 - **Live Leaderboard**: Real-time top 10 rankings
@@ -39,7 +39,7 @@ A **pure Java network programming** implementation of a real-time multiplayer sh
 - **Visual Effects**: Particle explosions, screen shake, glowing elements
 - **Smooth Animations**: CSS transitions, fade-ins, slide effects
 
-### 🎤 Voice Chat
+###  Voice Chat
 
 - **WebRTC P2P**: Peer-to-peer voice communication
 - **Push-to-Talk**: Toggle microphone on/off
@@ -47,7 +47,7 @@ A **pure Java network programming** implementation of a real-time multiplayer sh
 - **Visual Indicators**: Microphone status icon
 - **Low Latency**: Direct peer connections
 
-### 💬 Enhanced Chat System
+###  Enhanced Chat System
 
 - **Text Chat**: Real-time messaging between players
 - **Keyboard Shortcuts**: Enter to open, ESC to close
@@ -57,7 +57,7 @@ A **pure Java network programming** implementation of a real-time multiplayer sh
 
 ---
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Using Makefile (Recommended)
 
@@ -97,7 +97,7 @@ python -m http.server 3000
 
 ---
 
-## 📋 Prerequisites
+##  Prerequisites
 
 | Requirement | Version | Purpose |
 |-------------|---------|---------|
@@ -108,21 +108,21 @@ python -m http.server 3000
 
 ---
 
-## 📚 Documentation
+##  Documentation
 
 | Document | Purpose |
 |----------|---------|
 | **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | Original technical design |
-| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** | ✨ **Updated** - New package structure |
+| **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** |  **Updated** - New package structure |
 | **[GAMEPLAY.md](docs/GAMEPLAY.md)** | Game guide & strategies |
 | **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** | Original dev setup |
-| **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** | ✨ **Updated** - Makefile reference & new structure |
+| **[DEVELOPMENT.md](docs/DEVELOPMENT.md)** |  **Updated** - Makefile reference & new structure |
 | **[SERVER_STRUCTURE.md](SERVER_STRUCTURE.md)** | Detailed server package guide |
 | **[RESTRUCTURING_SUMMARY.md](RESTRUCTURING_SUMMARY.md)** | Project restructuring overview |
 
 ------
 
-## 🎮 Game Controls
+##  Game Controls
 
 ### Movement & Combat
 
@@ -143,11 +143,11 @@ python -m http.server 3000
 | **Escape** | Close chat |
 | **Microphone Icon** | Toggle voice chat |
 
-👉 **[See GAMEPLAY.md for complete guide](docs/GAMEPLAY.md)**
+ **[See GAMEPLAY.md for complete guide](docs/GAMEPLAY.md)**
 
 ---
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 ### System Diagram
 
@@ -166,11 +166,11 @@ The server is organized into **5 focused packages**:
 
 ```
 com/minitankfire/
-├── server/       🖥️ GameServer (bootstrap & lifecycle)
-├── network/      🌐 WebSocket protocol & client connections
-├── game/         🎮 GameRoom (game logic & physics)
-├── model/        📊 Player, Bullet, PowerUp entities
-└── util/         🔧 JsonUtil (serialization)
+├── server/        GameServer (bootstrap & lifecycle)
+├── network/       WebSocket protocol & client connections
+├── game/          GameRoom (game logic & physics)
+├── model/         Player, Bullet, PowerUp entities
+└── util/          JsonUtil (serialization)
 ```
 
 - **GameServer.java** - ServerSocket + Thread Pool
@@ -184,7 +184,7 @@ For detailed architecture, see **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
 ---
 
-## 📡 Network Protocol
+##  Network Protocol
 
 ### Main Messages
 
@@ -202,7 +202,7 @@ For detailed architecture, see **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 {"type": "move", "x": 400, "y": 300, "angle": 45}
 ```
 
-👉 **[See ARCHITECTURE.md for protocol details](docs/ARCHITECTURE.md#network-protocol)**
+ **[See ARCHITECTURE.md for protocol details](docs/ARCHITECTURE.md#network-protocol)**
 
 ---
 
@@ -213,7 +213,7 @@ For detailed architecture, see **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 - **Text**: White with neon shadows
 - **Icons**: Font Awesome 6.4.0
 
-## 🔧 Configuration
+##  Configuration
 
 ### Server Settings
 
@@ -234,7 +234,7 @@ this.canvas.width = 1920;
 this.canvas.height = 1080;
 ```
 
-## 🎯 Power-ups
+##  Power-ups
 
 | Type            | Effect              | Duration   | Color   |
 | --------------- | ------------------- | ---------- | ------- |
@@ -242,7 +242,7 @@ this.canvas.height = 1080;
 | **Speed Boost** | +50% movement speed | 3 seconds  | Yellow  |
 | **Double Fire** | Fire 2 bullets      | 10 seconds | Magenta |
 
-## 📊 Scoring System
+##  Scoring System
 
 | Event            | Points |
 | ---------------- | ------ |
@@ -250,7 +250,7 @@ this.canvas.height = 1080;
 | Death            | −1     |
 | Collect Power-up | +0.5   |
 
-## 🔮 Future Enhancements
+##  Future Enhancements
 
 - [ ] **Team Mode**: Red vs Blue teams
 - [ ] **Multiple Maps**: Different arena layouts
@@ -263,14 +263,14 @@ this.canvas.height = 1080;
 - [ ] **Background Music**: Ambient tracks
 - [ ] **Mobile Support**: Touch controls
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer          | Technology                         | Version  |
 | -------------- | ---------------------------------- | -------- |
 | **Server**     | Pure Java                          | 11+      |
 | **Networking** | java.net.ServerSocket              | Built-in |
-| **WebSocket**  | **Manual RFC 6455 Implementation** | ✅       |
-| **JSON**       | **Custom JsonUtil** (no Gson!)     | ✅       |
+| **WebSocket**  | **Manual RFC 6455 Implementation** |        |
+| **JSON**       | **Custom JsonUtil** (no Gson!)     |        |
 | **Threading**  | java.util.concurrent               | Built-in |
 | **I/O**        | java.io Streams                    | Built-in |
 | **Build Tool** | Maven                              | 3.x      |
@@ -279,9 +279,9 @@ this.canvas.height = 1080;
 | **Voice**      | WebRTC                             | -        |
 | **Icons**      | Font Awesome                       | 6.4.0    |
 
-**🎯 Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
+** Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
 
-## 📝 Development
+##  Development
 
 ### Building
 
@@ -305,7 +305,7 @@ java -jar target/minitankfire-server-1.0-SNAPSHOT.jar
 
 ---
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Server Issues
 - Check if port 8080 is available
@@ -326,7 +326,7 @@ java -jar target/minitankfire-server-1.0-SNAPSHOT.jar
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 ### Quick Start for Developers
 
@@ -338,16 +338,16 @@ make run
 ```
 
 ### Code Standards
-- ✅ Pure Java only
-- ✅ Follow style guidelines
-- ✅ Test locally first
-- ✅ Meaningful commit messages
+-  Pure Java only
+-  Follow style guidelines
+-  Test locally first
+-  Meaningful commit messages
 
-👉 **[See DEVELOPMENT.md for details](docs/DEVELOPMENT.md)**
+ **[See DEVELOPMENT.md for details](docs/DEVELOPMENT.md)**
 
 ---
 
-## 📝 Project Structure
+##  Project Structure
 
 ```
 Tank-Game/
@@ -363,11 +363,11 @@ Tank-Game/
 
 ---
 
-## 📄 License
+##  License
 
 Open source for educational purposes.
 
-## 👥 Credits
+##  Credits
 
 **Developed for**: IN 3111 - Network Programming Module
 
@@ -375,14 +375,14 @@ Open source for educational purposes.
 
 ---
 
-## 📞 Quick Links
+##  Quick Links
 
-- 🎮 [Play Guide](docs/GAMEPLAY.md)
-- 💻 [Dev Setup](docs/DEVELOPMENT.md)  
-- 🏗️ [Architecture](docs/ARCHITECTURE.md)
+-  [Play Guide](docs/GAMEPLAY.md)
+-  [Dev Setup](docs/DEVELOPMENT.md)  
+-  [Architecture](docs/ARCHITECTURE.md)
 
 ---
 
 **Ready to play?** → `make run` → Open `http://localhost:3000`
 
-**Have fun!** 🚀
+**Have fun!** 

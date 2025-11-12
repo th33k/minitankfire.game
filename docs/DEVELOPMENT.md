@@ -1,4 +1,4 @@
-# 👨‍💻 Development Guide - Mini Tank Fire
+#  Development Guide - Mini Tank Fire
 
 ## Table of Contents
 
@@ -136,13 +136,13 @@ mvn clean compile exec:java
 Expected output:
 ```
 ╔════════════════════════════════════════════════════════════╗
-║      🎮 Tank Game Server - Pure Java Network Programming  ║
+║       Tank Game Server - Pure Java Network Programming  ║
 ╠════════════════════════════════════════════════════════════╣
 ║  Architecture:                                             ║
-║  ✓ Multi-threaded Client Handling                         ║
-║  ✓ WebSocket Protocol (RFC 6455)                          ║
-║  ✓ Real-time Game Loop (20 FPS)                           ║
-║  ✓ Concurrent State Management                            ║
+║   Multi-threaded Client Handling                         ║
+║   WebSocket Protocol (RFC 6455)                          ║
+║   Real-time Game Loop (20 FPS)                           ║
+║   Concurrent State Management                            ║
 ╠════════════════════════════════════════════════════════════╣
 ║  Server Address: 0.0.0.0:8080                             ║
 ║  WebSocket URI: ws://localhost:8080/game                  ║
@@ -208,18 +208,18 @@ minitankfire.game/
 │   ├── pom.xml                                 # Maven configuration
 │   ├── target/                                 # Build artifacts (generated)
 │   └── src/main/java/com/minitankfire/
-│       ├── server/                             # 🖥️ Server bootstrap
+│       ├── server/                             #  Server bootstrap
 │       │   └── GameServer.java
-│       ├── network/                            # 🌐 Network layer
+│       ├── network/                            #  Network layer
 │       │   ├── WebSocketHandler.java
 │       │   └── ClientHandler.java
-│       ├── game/                               # 🎮 Game logic
+│       ├── game/                               #  Game logic
 │       │   └── GameRoom.java
-│       ├── model/                              # 📊 Data models
+│       ├── model/                              #  Data models
 │       │   ├── Player.java
 │       │   ├── Bullet.java
 │       │   └── PowerUp.java
-│       └── util/                               # 🔧 Utilities
+│       └── util/                               #  Utilities
 │           └── JsonUtil.java
 │
 ├── docs/                                       # Documentation
@@ -967,4 +967,4 @@ git push
 
 ---
 
-**Happy coding!** 🚀
+**Happy coding!** 

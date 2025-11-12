@@ -1,4 +1,4 @@
-# 🏗️ Project Architecture & Technical Design
+#  Project Architecture & Technical Design
 
 ## Table of Contents
 
@@ -69,27 +69,27 @@ The server is organized into **5 focused packages** for clarity and maintainabil
 
 ```
 com/minitankfire/
-├── server/          🖥️ Server bootstrap & lifecycle
+├── server/           Server bootstrap & lifecycle
 │   └── GameServer.java
-├── network/         🌐 Network & WebSocket protocol
+├── network/          Network & WebSocket protocol
 │   ├── WebSocketHandler.java
 │   └── ClientHandler.java
-├── game/            🎮 Game logic & state management
+├── game/             Game logic & state management
 │   └── GameRoom.java
-├── model/           📊 Game entity data structures
+├── model/            Game entity data structures
 │   ├── Player.java
 │   ├── Bullet.java
 │   └── PowerUp.java
-└── util/            🔧 Utility functions
+└── util/             Utility functions
     └── JsonUtil.java
 ```
 
 **Benefits:**
-- ✅ Clear separation of concerns
-- ✅ Easy to locate specific functionality
-- ✅ Independent testing per package
-- ✅ Scalable for future enhancements
-- ✅ Reduced code coupling
+-  Clear separation of concerns
+-  Easy to locate specific functionality
+-  Independent testing per package
+-  Scalable for future enhancements
+-  Reduced code coupling
 
 ### Core Components
 
@@ -682,7 +682,7 @@ private volatile boolean gameRunning = true;  // Visibility across threads
 | Voice | WebRTC | - | P2P voice chat |
 | Icons | Font Awesome | 6.4.0 | UI iconography |
 
-**🎯 Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
+** Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
 
 ---
 
@@ -714,9 +714,9 @@ private volatile boolean gameRunning = true;  // Visibility across threads
 ## Conclusion
 
 The architecture prioritizes:
-- ✅ **Real-time responsiveness** (20 FPS game updates)
-- ✅ **Scalability** (thread pool, concurrent collections)
-- ✅ **Educational clarity** (pure Java, no frameworks)
-- ✅ **Network efficiency** (binary frames, message batching)
-- ✅ **Clear code organization** (package by responsibility)
-- ✅ **Thread safety** (no race conditions)
+-  **Real-time responsiveness** (20 FPS game updates)
+-  **Scalability** (thread pool, concurrent collections)
+-  **Educational clarity** (pure Java, no frameworks)
+-  **Network efficiency** (binary frames, message batching)
+-  **Clear code organization** (package by responsibility)
+-  **Thread safety** (no race conditions)
