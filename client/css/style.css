@@ -1173,64 +1173,87 @@ kbd {
   margin-bottom: 20px;
 }
 
-/* Settings Panel */
+/* Settings Panel - Dropdown Style */
 #settings-panel {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.8);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid var(--primary-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 255, 136, 0.4);
+  min-width: 320px;
+  max-width: 380px;
   z-index: 2000;
-  padding: 20px;
+  animation: slideDown 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-panel {
-  background: rgba(0, 0, 0, 0.9);
-  border: 2px solid var(--primary-color);
-  border-radius: 15px;
-  box-shadow: 0 0 40px rgba(0, 255, 136, 0.3);
-  min-width: 350px;
-  max-width: 500px;
-  width: 100%;
+  /* Container already defined by #settings-panel */
 }
 
 .settings-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px;
+  padding: 15px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(0, 255, 136, 0.1) 0%,
+    rgba(0, 255, 136, 0.05) 100%
+  );
   border-bottom: 1px solid var(--border-color);
 }
 
 .settings-header h3 {
   color: var(--primary-color);
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: bold;
   letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-header h3::before {
+  content: "⚙";
+  font-size: 1.3rem;
 }
 
 #close-settings {
   background: none;
   border: none;
-  color: var(--danger-color);
-  font-size: 1.5rem;
+  color: var(--text-secondary);
+  font-size: 1.8rem;
   cursor: pointer;
-  padding: 5px;
+  padding: 0;
+  width: 32px;
+  height: 32px;
   border-radius: 5px;
-  transition: background var(--transition-speed);
-  min-width: 44px;
-  min-height: 44px;
+  transition: all var(--transition-speed);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 #close-settings:hover {
   background: rgba(255, 68, 68, 0.2);
+  color: var(--danger-color);
+  transform: rotate(90deg);
 }
 
 #close-settings:focus-visible {
@@ -1239,18 +1262,48 @@ kbd {
 }
 
 .settings-content {
-  padding: 20px;
+  padding: 15px 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.settings-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
 }
 
 .setting-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding: 15px;
-  background: rgba(0, 0, 0, 0.5);
+  margin-bottom: 12px;
+  padding: 12px 15px;
+  background: rgba(0, 255, 136, 0.03);
   border-radius: 8px;
   border: 1px solid var(--border-color);
+  transition: all var(--transition-speed);
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-item:hover {
+  background: rgba(0, 255, 136, 0.08);
+  border-color: var(--primary-color);
 }
 
 .setting-label {
@@ -1258,13 +1311,16 @@ kbd {
   align-items: center;
   gap: 10px;
   color: var(--text-primary);
-  font-weight: bold;
+  font-weight: 500;
   cursor: pointer;
+  font-size: 0.95rem;
 }
 
 .setting-label i {
   color: var(--primary-color);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  width: 20px;
+  text-align: center;
 }
 
 /* Toggle Switch */
@@ -1612,13 +1668,24 @@ input:focus-visible + .toggle-slider {
     max-height: 150px;
   }
 
-  .settings-panel {
+  /* Settings dropdown on mobile */
+  #settings-panel {
+    right: 10px;
+    top: 60px;
     min-width: 280px;
-    max-width: 90vw;
+    max-width: calc(100vw - 20px);
   }
 
   .settings-header h3 {
-    font-size: 1.2rem;
+    font-size: 1rem;
+  }
+
+  .setting-item {
+    padding: 10px 12px;
+  }
+
+  .setting-label {
+    font-size: 0.85rem;
   }
 }
 
