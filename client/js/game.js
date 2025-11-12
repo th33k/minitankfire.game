@@ -51,7 +51,7 @@ class GameClient {
 
     init() {
         this.setupEventListeners();
-        this.setupCallsignScreen();
+        this.setupJoinScreen();
         this.setupLobbyScreen();
         this.initVoiceChat();
     }
@@ -182,7 +182,7 @@ class GameClient {
         // Initial validation
         validateForm();
         
-        // Form submit handler
+        // Form submit handler - goes to lobby, not directly to game
         const handleSubmit = (e) => {
             if (e) e.preventDefault();
             
@@ -201,11 +201,16 @@ class GameClient {
                 return;
             }
             
+            // Save the name and server address
+            this.playerName = name;
+            this.serverAddress = server;
+            
             // Visual feedback
             joinBtn.classList.add('loading');
             joinBtn.disabled = true;
             
-            this.joinGame(name, server);
+            // Show lobby screen instead of joining game directly
+            this.showLobbyScreen();
         };
         
         joinForm.addEventListener('submit', handleSubmit);
@@ -220,18 +225,6 @@ class GameClient {
                 e.preventDefault();
                 playerNameInput.focus();
             }
-            
-            if (!serverAddress) {
-                this.showNotification('Please enter a server address!', 'error');
-                return;
-            }
-            
-            // Save the name and server address
-            this.playerName = name;
-            this.serverAddress = serverAddress;
-            
-            // Show lobby screen
-            this.showLobbyScreen();
         });
         
         playerNameInput.addEventListener('keypress', (e) => {
@@ -255,8 +248,8 @@ class GameClient {
     }
 
     showLobbyScreen() {
-        // Hide callsign screen
-        document.getElementById('callsign-screen').style.display = 'none';
+        // Hide join/callsign screen
+        document.getElementById('join-screen').style.display = 'none';
         
         // Show lobby screen
         document.getElementById('lobby-screen').style.display = 'flex';
@@ -536,8 +529,15 @@ class GameClient {
     }
 
     joinGame(name, server = 'localhost') {
+        // Close lobby connection
+        if (this.lobbyWs) {
+            this.lobbyWs.close();
+            this.lobbyWs = null;
+        }
+        
         this.playerName = name;
-        const serverAddress = server || 'localhost';
+        // Use stored serverAddress if available, otherwise use the parameter
+        const serverAddress = this.serverAddress || server || 'localhost';
         const wsUrl = `ws://${serverAddress}:8080/game`;
         
         console.log('Attempting to connect to:', wsUrl);
@@ -554,8 +554,15 @@ class GameClient {
                 this.hideLoadingOverlay();
                 this.showNotification('Connection timeout. Please check server address.', 'error');
                 const joinBtn = document.getElementById('join-btn');
-                joinBtn.classList.remove('loading');
-                joinBtn.disabled = false;
+                if (joinBtn) {
+                    joinBtn.classList.remove('loading');
+                    joinBtn.disabled = false;
+                }
+                const lobbyJoinBtn = document.getElementById('lobby-join-btn');
+                if (lobbyJoinBtn) {
+                    lobbyJoinBtn.classList.remove('loading');
+                    lobbyJoinBtn.disabled = false;
+                }
             }
         }, 10000); // 10 second timeout
         
@@ -564,11 +571,13 @@ class GameClient {
             console.log('WebSocket connected');
             this.sendMessage({ type: 'join', name: name });
             
-            // Hide join screen and show HUD
+            // Hide both join and lobby screens, show HUD
             const joinScreen = document.getElementById('join-screen');
+            const lobbyScreen = document.getElementById('lobby-screen');
             const gameHud = document.getElementById('game-hud');
             
-            joinScreen.style.display = 'none';
+            if (joinScreen) joinScreen.style.display = 'none';
+            if (lobbyScreen) lobbyScreen.style.display = 'none';
             gameHud.style.display = 'block';
             gameHud.classList.add('active');
             
