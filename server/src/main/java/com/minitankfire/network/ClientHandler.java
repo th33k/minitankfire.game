@@ -37,7 +37,7 @@ public class ClientHandler implements Runnable {
                 return;
             }
 
-            System.out.println("[CONNECTED] Client: " + playerId.substring(0, 8) + 
+            System.out.println("[CONNECTED] Client: " + playerId.substring(0, 8) +
                     " from " + webSocket.getSocket().getInetAddress());
 
             // Message processing loop
@@ -70,6 +70,10 @@ public class ClientHandler implements Runnable {
                 return;
 
             switch (type) {
+                case "lobby_info":
+                    handleLobbyInfo();
+                    break;
+
                 case "join":
                     handleJoin(data);
                     break;
@@ -106,6 +110,11 @@ public class ClientHandler implements Runnable {
             System.out.println("[JOIN] Player '" + name + "' (ID: " + playerId.substring(0, 8) + ")");
             gameRoom.addPlayer(playerId, name, this);
         }
+    }
+
+    private void handleLobbyInfo() {
+        String lobbyInfo = gameRoom.getLobbyInfo();
+        sendMessage(lobbyInfo);
     }
 
     private void handleMove(Map<String, String> data) {

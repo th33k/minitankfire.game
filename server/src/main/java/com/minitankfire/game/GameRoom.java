@@ -53,6 +53,10 @@ public class GameRoom {
         System.out.println("[GAME] Winning score configured: " + winningScore);
     }
 
+    public String getLobbyInfo() {
+        return JsonUtil.createLobbyInfoMessage(players.values(), winningScore);
+    }
+
     // ========== Player Management ==========
 
     public void addPlayer(String playerId, String name, ClientHandler clientHandler) {

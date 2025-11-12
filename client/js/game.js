@@ -6,6 +6,7 @@ class GameClient {
         this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
         
         this.ws = null;
+        this.lobbyWs = null;
         this.playerId = null;
         this.myPlayer = null;
         this.players = {};
@@ -51,6 +52,7 @@ class GameClient {
     init() {
         this.setupEventListeners();
         this.setupJoinScreen();
+        this.setupLobbyScreen();
         this.initVoiceChat();
     }
 
@@ -180,7 +182,7 @@ class GameClient {
         // Initial validation
         validateForm();
         
-        // Form submit handler
+        // Form submit handler - goes to lobby, not directly to game
         const handleSubmit = (e) => {
             if (e) e.preventDefault();
             
@@ -199,11 +201,16 @@ class GameClient {
                 return;
             }
             
+            // Save the name and server address
+            this.playerName = name;
+            this.serverAddress = server;
+            
             // Visual feedback
             joinBtn.classList.add('loading');
             joinBtn.disabled = true;
             
-            this.joinGame(name, server);
+            // Show lobby screen instead of joining game directly
+            this.showLobbyScreen();
         };
         
         joinForm.addEventListener('submit', handleSubmit);
@@ -228,6 +235,97 @@ class GameClient {
                 }
             }
         });
+    }
+
+    setupLobbyScreen() {
+        document.getElementById('lobby-join-btn').addEventListener('click', () => {
+            if (this.playerName && this.serverAddress) {
+                this.joinGame(this.playerName);
+            } else {
+                this.showNotification('Please complete callsign entry first!', 'error');
+            }
+        });
+    }
+
+    showLobbyScreen() {
+        // Hide join/callsign screen
+        document.getElementById('join-screen').style.display = 'none';
+        
+        // Show lobby screen
+        document.getElementById('lobby-screen').style.display = 'flex';
+        
+        // Connect to server to get lobby info
+        this.connectToLobby();
+    }
+
+    connectToLobby() {
+        const serverAddress = this.serverAddress || 'localhost';
+        
+        try {
+            this.lobbyWs = new WebSocket(`ws://${serverAddress}:8080/game`);
+            
+            this.lobbyWs.onopen = () => {
+                // Request lobby information
+                this.sendLobbyMessage({ type: 'lobby_info' });
+            };
+            
+            this.lobbyWs.onmessage = (event) => {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'lobby_info') {
+                    this.updateLobbyDisplay(msg);
+                }
+            };
+            
+            this.lobbyWs.onerror = (error) => {
+                console.log('Lobby connection error:', error);
+                document.getElementById('lobby-player-count').textContent = '?';
+            };
+            
+            this.lobbyWs.onclose = () => {
+                // Retry connection after 3 seconds
+                setTimeout(() => {
+                    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                        this.connectToLobby();
+                    }
+                }, 3000);
+            };
+        } catch (error) {
+            console.log('Could not connect to lobby:', error);
+        }
+    }
+
+    sendLobbyMessage(msg) {
+        if (this.lobbyWs && this.lobbyWs.readyState === WebSocket.OPEN) {
+            this.lobbyWs.send(JSON.stringify(msg));
+        }
+    }
+
+    updateLobbyDisplay(msg) {
+        // Update winning score
+        if (msg.winningScore) {
+            document.getElementById('lobby-winning-score').textContent = msg.winningScore;
+        }
+        
+        // Update player count
+        document.getElementById('lobby-player-count').textContent = msg.playerCount || 0;
+        
+        // Update leaderboard
+        const scoresDiv = document.getElementById('lobby-scores');
+        
+        if (!msg.players || msg.players.length === 0) {
+            scoresDiv.innerHTML = '<p class="no-players">No players in the game lobby</p>';
+        } else {
+            scoresDiv.innerHTML = msg.players
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 10)
+                .map((p, index) => `
+                    <div class="lobby-score-item">
+                        <span class="lobby-score-rank">#${index + 1}</span>
+                        <span class="lobby-score-name">${p.name}</span>
+                        <span class="lobby-score-value">${p.score}</span>
+                    </div>
+                `).join('');
+        }
     }
 
     async initVoiceChat() {
@@ -431,8 +529,15 @@ class GameClient {
     }
 
     joinGame(name, server = 'localhost') {
+        // Close lobby connection
+        if (this.lobbyWs) {
+            this.lobbyWs.close();
+            this.lobbyWs = null;
+        }
+        
         this.playerName = name;
-        const serverAddress = server || 'localhost';
+        // Use stored serverAddress if available, otherwise use the parameter
+        const serverAddress = this.serverAddress || server || 'localhost';
         const wsUrl = `ws://${serverAddress}:8080/game`;
         
         console.log('Attempting to connect to:', wsUrl);
@@ -449,8 +554,15 @@ class GameClient {
                 this.hideLoadingOverlay();
                 this.showNotification('Connection timeout. Please check server address.', 'error');
                 const joinBtn = document.getElementById('join-btn');
-                joinBtn.classList.remove('loading');
-                joinBtn.disabled = false;
+                if (joinBtn) {
+                    joinBtn.classList.remove('loading');
+                    joinBtn.disabled = false;
+                }
+                const lobbyJoinBtn = document.getElementById('lobby-join-btn');
+                if (lobbyJoinBtn) {
+                    lobbyJoinBtn.classList.remove('loading');
+                    lobbyJoinBtn.disabled = false;
+                }
             }
         }, 10000); // 10 second timeout
         
@@ -459,11 +571,13 @@ class GameClient {
             console.log('WebSocket connected');
             this.sendMessage({ type: 'join', name: name });
             
-            // Hide join screen and show HUD
+            // Hide both join and lobby screens, show HUD
             const joinScreen = document.getElementById('join-screen');
+            const lobbyScreen = document.getElementById('lobby-screen');
             const gameHud = document.getElementById('game-hud');
             
-            joinScreen.style.display = 'none';
+            if (joinScreen) joinScreen.style.display = 'none';
+            if (lobbyScreen) lobbyScreen.style.display = 'none';
             gameHud.style.display = 'block';
             gameHud.classList.add('active');
             

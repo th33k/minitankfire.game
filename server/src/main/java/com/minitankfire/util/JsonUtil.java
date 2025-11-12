@@ -242,4 +242,31 @@ public class JsonUtil {
 
         return sb.toString();
     }
+
+    /**
+     * Creates a lobby info message containing player count, winning score, and
+     * current leaderboard
+     */
+    public static String createLobbyInfoMessage(Collection<Player> players, int winningScore) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"type\":\"lobby_info\",");
+        sb.append(String.format("\"playerCount\":%d,", players.size()));
+        sb.append(String.format("\"winningScore\":%d,", winningScore));
+
+        // Build player list sorted by score desc
+        List<Player> list = new ArrayList<>(players);
+        list.sort((a, b) -> Integer.compare(b.getScore(), a.getScore()));
+
+        sb.append("\"players\":[");
+        boolean first = true;
+        for (Player p : list) {
+            if (!first)
+                sb.append(',');
+            sb.append(String.format("{\"name\":\"%s\",\"score\":%d}", escapeJson(p.getName()), p.getScore()));
+            first = false;
+        }
+        sb.append("]}");
+
+        return sb.toString();
+    }
 }
