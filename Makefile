@@ -7,10 +7,10 @@ build:
 	@echo "Build complete!"
 
 # Run the game (server and client)
-run: server client
+run: client server
 
 # Start the server
-server:
+server: build
 	@echo "Starting server..."
 	cd server && mvn exec:java &
 	@echo "Server started on ws://localhost:8080"
@@ -18,7 +18,7 @@ server:
 # Start the client
 client:
 	@echo "Starting client server..."
-	cd client && python3 -m http.server 3000 --bind 0.0.0.0 &
+	cd client && python -m http.server 3000 --bind 0.0.0.0 &
 	@echo "Client server started on http://localhost:3000"
 	@echo "Open http://localhost:3000 in your browser"
 

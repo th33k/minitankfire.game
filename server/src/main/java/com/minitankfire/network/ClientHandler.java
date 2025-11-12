@@ -83,7 +83,7 @@ public class ClientHandler implements Runnable {
                     break;
 
                 case "fire":
-                    gameRoom.handleFire(playerId);
+                    gameRoom.handleFire(playerId, data);
                     break;
 
                 case "chat":
