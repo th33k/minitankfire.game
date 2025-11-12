@@ -11,8 +11,40 @@
     <div id="game-container">
         <canvas id="game-canvas" width="1200" height="800"></canvas>
         
-        <!-- Lobby Screen -->
-        <div id="lobby-screen">
+        <!-- Client Callsign Entry Screen (First Screen) -->
+        <div id="callsign-screen">
+            <div class="join-content">
+                <h1 class="game-title">
+                    <i class="fas fa-chess-rook"></i> 
+                    MINI TANK FIRE
+                </h1>
+                <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
+                <div class="join-form">
+                    <input type="text" id="player-name" placeholder="Enter your callsign" maxlength="20" autofocus>
+                    <input type="text" id="server-address" placeholder="Server address (e.g., 192.168.1.100)" value="localhost">
+                    <button id="deploy-btn" class="btn-primary">
+                        <i class="fas fa-play"></i> Deploy to Battle
+                    </button>
+                </div>
+                <div class="game-info">
+                    <div class="info-item">
+                        <i class="fas fa-keyboard"></i>
+                        <span>WASD - Move</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-mouse-pointer"></i>
+                        <span>Mouse - Aim & Shoot</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-comments"></i>
+                        <span>Enter - Chat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lobby Screen (Second Screen - after Deploy to Battle) -->
+        <div id="lobby-screen" style="display: none;">
             <div class="lobby-content">
                 <h1 class="game-title">
                     <i class="fas fa-chess-rook"></i> 
@@ -41,42 +73,9 @@
                 </div>
 
                 <div class="lobby-actions">
-                    <input type="text" id="lobby-server-address" placeholder="Server address (e.g., 192.168.1.100)" value="localhost">
                     <button id="lobby-join-btn" class="btn-primary">
                         <i class="fas fa-gamepad"></i> Join Game
                     </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Join Screen -->
-        <div id="join-screen" style="display: none;">
-            <div class="join-content">
-                <h1 class="game-title">
-                    <i class="fas fa-chess-rook"></i> 
-                    MINI TANK FIRE
-                </h1>
-                <p class="game-subtitle">Real-time Multiplayer Battle Arena</p>
-                <div class="join-form">
-                    <input type="text" id="server-address" placeholder="Server address (e.g., 192.168.1.100)" value="localhost">
-                    <input type="text" id="player-name" placeholder="Enter your callsign" maxlength="20" autofocus>
-                    <button id="join-btn" class="btn-primary">
-                        <i class="fas fa-play"></i> Deploy to Battle
-                    </button>
-                </div>
-                <div class="game-info">
-                    <div class="info-item">
-                        <i class="fas fa-keyboard"></i>
-                        <span>WASD - Move</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-mouse-pointer"></i>
-                        <span>Mouse - Aim & Shoot</span>
-                    </div>
-                    <div class="info-item">
-                        <i class="fas fa-comments"></i>
-                        <span>Enter - Chat</span>
-                    </div>
                 </div>
             </div>
         </div>

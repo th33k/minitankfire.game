@@ -192,6 +192,26 @@ body {
   width: 100%;
 }
 
+/* Callsign Entry Screen (First Screen) */
+#callsign-screen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(10, 10, 30, 0.95) 0%,
+    rgba(20, 20, 50, 0.95) 100%
+  );
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.5s ease;
+}
+
 /* Join Screen */
 #join-screen {
   position: absolute;
@@ -276,6 +296,25 @@ body {
 }
 
 #player-name:focus {
+  border-color: #00ffcc;
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
+  transform: scale(1.02);
+}
+
+#server-address {
+  width: 350px;
+  padding: 15px 20px;
+  font-size: 1.1rem;
+  border: 2px solid #00ff88;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+#server-address:focus {
   border-color: #00ffcc;
   box-shadow: 0 0 20px rgba(0, 255, 136, 0.4);
   transform: scale(1.02);

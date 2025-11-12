@@ -42,8 +42,8 @@ class GameClient {
 
     init() {
         this.setupEventListeners();
+        this.setupCallsignScreen();
         this.setupLobbyScreen();
-        this.setupJoinScreen();
         this.initVoiceChat();
     }
 
@@ -122,17 +122,67 @@ class GameClient {
         }
     }
 
+    setupCallsignScreen() {
+        // Deploy to Battle button - goes to lobby
+        document.getElementById('deploy-btn').addEventListener('click', () => {
+            const name = document.getElementById('player-name').value.trim();
+            const serverAddress = document.getElementById('server-address').value.trim();
+            
+            if (!name) {
+                this.showNotification('Please enter a callsign!', 'error');
+                return;
+            }
+            
+            if (!serverAddress) {
+                this.showNotification('Please enter a server address!', 'error');
+                return;
+            }
+            
+            // Save the name and server address
+            this.playerName = name;
+            this.serverAddress = serverAddress;
+            
+            // Show lobby screen
+            this.showLobbyScreen();
+        });
+        
+        // Enter key support
+        document.getElementById('player-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('server-address').focus();
+            }
+        });
+        
+        document.getElementById('server-address').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('deploy-btn').click();
+            }
+        });
+    }
+
     setupLobbyScreen() {
         document.getElementById('lobby-join-btn').addEventListener('click', () => {
-            this.showJoinScreen();
+            if (this.playerName && this.serverAddress) {
+                this.joinGame(this.playerName);
+            } else {
+                this.showNotification('Please complete callsign entry first!', 'error');
+            }
         });
+    }
+
+    showLobbyScreen() {
+        // Hide callsign screen
+        document.getElementById('callsign-screen').style.display = 'none';
+        
+        // Show lobby screen
+        document.getElementById('lobby-screen').style.display = 'flex';
         
         // Connect to server to get lobby info
         this.connectToLobby();
     }
 
     connectToLobby() {
-        const serverAddress = document.getElementById('lobby-server-address').value.trim() || 'localhost';
+        const serverAddress = this.serverAddress || 'localhost';
         
         try {
             this.lobbyWs = new WebSocket(`ws://${serverAddress}:8080/game`);
@@ -199,50 +249,6 @@ class GameClient {
                     </div>
                 `).join('');
         }
-    }
-
-    showJoinScreen() {
-        // Close lobby connection
-        if (this.lobbyWs) {
-            this.lobbyWs.close();
-            this.lobbyWs = null;
-        }
-        
-        // Transfer server address
-        const serverAddress = document.getElementById('lobby-server-address').value;
-        document.getElementById('server-address').value = serverAddress;
-        
-        // Hide lobby, show join screen
-        document.getElementById('lobby-screen').style.display = 'none';
-        document.getElementById('join-screen').style.display = 'flex';
-        
-        // Focus on player name input
-        setTimeout(() => {
-            document.getElementById('player-name').focus();
-        }, 100);
-    }
-
-    setupJoinScreen() {
-        document.getElementById('join-btn').addEventListener('click', () => {
-            const name = document.getElementById('player-name').value.trim();
-            if (name) {
-                this.joinGame(name);
-            } else {
-                this.showNotification('Please enter a callsign!', 'error');
-            }
-        });
-        
-        document.getElementById('player-name').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('join-btn').click();
-            }
-        });
-        
-        document.getElementById('server-address').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('player-name').focus();
-            }
-        });
     }
 
     async initVoiceChat() {
@@ -393,13 +399,19 @@ class GameClient {
     }
 
     joinGame(name) {
+        // Close lobby connection
+        if (this.lobbyWs) {
+            this.lobbyWs.close();
+            this.lobbyWs = null;
+        }
+        
         this.playerName = name;
-        const serverAddress = document.getElementById('server-address').value.trim() || 'localhost';
+        const serverAddress = this.serverAddress || 'localhost';
         this.ws = new WebSocket(`ws://${serverAddress}:8080/game`);
         
         this.ws.onopen = () => {
             this.sendMessage({ type: 'join', name: name });
-            document.getElementById('join-screen').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'none';
             document.getElementById('game-hud').style.display = 'block';
             this.showNotification(`Welcome, ${name}!`, 'success');
             this.gameLoop();
