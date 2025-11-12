@@ -380,11 +380,10 @@ class GameClient {
             // Create settings panel if it doesn't exist
             settingsPanel = document.createElement('div');
             settingsPanel.id = 'settings-panel';
-            settingsPanel.className = 'settings-panel';
             settingsPanel.innerHTML = `
                 <div class="settings-header">
                     <h3>SETTINGS</h3>
-                    <button id="close-settings" class="icon-btn-small">×</button>
+                    <button id="close-settings" class="icon-btn-small" aria-label="Close settings">×</button>
                 </div>
                 <div class="settings-content">
                     <div class="setting-item">
@@ -396,13 +395,38 @@ class GameClient {
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
+                    <div class="setting-item">
+                        <label for="sound-effects-toggle" class="setting-label">
+                            <i class="fas fa-volume-up"></i> Sound Effects
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="sound-effects-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="screen-shake-toggle" class="setting-label">
+                            <i class="fas fa-bomb"></i> Screen Shake
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="screen-shake-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
                 </div>
             `;
             
-            document.body.appendChild(settingsPanel);
+            // Add to game HUD instead of body for better positioning
+            const gameHud = document.getElementById('game-hud');
+            if (gameHud) {
+                gameHud.appendChild(settingsPanel);
+            } else {
+                document.body.appendChild(settingsPanel);
+            }
             
             // Add event listeners
-            document.getElementById('close-settings').addEventListener('click', () => {
+            document.getElementById('close-settings').addEventListener('click', (e) => {
+                e.stopPropagation();
                 settingsPanel.remove();
             });
             
@@ -412,13 +436,20 @@ class GameClient {
             });
             
             // Close on click outside
-            settingsPanel.addEventListener('click', (e) => {
-                if (e.target === settingsPanel) {
-                    settingsPanel.remove();
-                }
-            });
+            setTimeout(() => {
+                document.addEventListener('click', this.closeSettingsOutside = (e) => {
+                    if (!settingsPanel.contains(e.target) && e.target.id !== 'settings-btn') {
+                        settingsPanel.remove();
+                        document.removeEventListener('click', this.closeSettingsOutside);
+                    }
+                });
+            }, 0);
+            
         } else {
             settingsPanel.remove();
+            if (this.closeSettingsOutside) {
+                document.removeEventListener('click', this.closeSettingsOutside);
+            }
         }
     }
 
