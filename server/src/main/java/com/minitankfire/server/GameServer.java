@@ -3,6 +3,7 @@ package com.minitankfire.server;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -55,6 +56,17 @@ public class GameServer {
      * Prints welcome banner with server information
      */
     private void printBanner(int port) {
+        String hostAddress;
+        String hostName;
+        try {
+            InetAddress localHost = InetAddress.getLocalHost();
+            hostAddress = localHost.getHostAddress();
+            hostName = localHost.getHostName();
+        } catch (Exception e) {
+            hostAddress = "localhost";
+            hostName = "localhost";
+        }
+        
         System.out.println("╔════════════════════════════════════════════════════════════╗");
         System.out.println("║      🎮 Tank Game Server - Pure Java Network Programming   ║");
         System.out.println("╠════════════════════════════════════════════════════════════╣");
@@ -64,8 +76,10 @@ public class GameServer {
         System.out.println("║  ✓ Real-time Game Loop (20 FPS)                            ║");
         System.out.println("║  ✓ Concurrent State Management                             ║");
         System.out.println("╠════════════════════════════════════════════════════════════╣");
-        System.out.println("║  Server Address: 0.0.0.0:" + String.format("%-43s", port) + "║");
-        System.out.println("║  WebSocket URI: ws://localhost:" + String.format("%-37s", port + "/game") + "║");
+        System.out.println("║  Server IP: " + hostAddress + String.format("%" + (50 - hostAddress.length()) + "s", "") + "║");
+        System.out.println("║  Server Name: " + hostName + String.format("%" + (46 - hostName.length()) + "s", "") + "║");
+        System.out.println("║  Port: " + String.format("%-52s", port) + "║");
+        System.out.println("║  WebSocket URI: ws://" + hostName + ":" + String.format("%-32s", port + "/game") + "║");
         System.out.println("║  Max Clients: " + String.format("%-48s", MAX_CLIENTS) + "║");
         System.out.println("╚════════════════════════════════════════════════════════════╝");
     }

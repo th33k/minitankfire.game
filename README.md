@@ -219,8 +219,8 @@ For detailed architecture, see **[ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
 ```java
 // GameRoom.java
-private static final int MAP_WIDTH = 1200;
-private static final int MAP_HEIGHT = 800;
+private static final int MAP_WIDTH = 1920;
+private static final int MAP_HEIGHT = 1080;
 private static final int PLAYER_SPEED = 3;
 private static final int BULLET_SPEED = 8;
 ```
@@ -230,8 +230,8 @@ private static final int BULLET_SPEED = 8;
 ```javascript
 // game.js
 this.fireRate = 500; // ms between shots
-this.canvas.width = 1200;
-this.canvas.height = 800;
+this.canvas.width = 1920;
+this.canvas.height = 1080;
 ```
 
 ## 🎯 Power-ups
@@ -331,7 +331,7 @@ java -jar target/minitankfire-server-1.0-SNAPSHOT.jar
 ### Quick Start for Developers
 
 ```bash
-git clone https://github.com/th33k/Tank-Game.git
+git clone https://github.com/th33k/minitankfire.game.git
 cd Tank-Game && git checkout dev
 cd server && mvn clean install
 make run
@@ -359,7 +359,6 @@ Tank-Game/
     ├── ARCHITECTURE.md
     ├── GAMEPLAY.md
     ├── DEVELOPMENT.md
-    └── DEPLOYMENT.md
 ```
 
 ---
@@ -381,7 +380,6 @@ Open source for educational purposes.
 - 🎮 [Play Guide](docs/GAMEPLAY.md)
 - 💻 [Dev Setup](docs/DEVELOPMENT.md)  
 - 🏗️ [Architecture](docs/ARCHITECTURE.md)
-- 📚 [Concepts](docs/NETWORK_PROGRAMMING_CONCEPTS.md)
 
 ---
 
