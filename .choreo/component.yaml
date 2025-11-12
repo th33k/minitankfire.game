@@ -1,5 +1,2 @@
 name: tank-game-server
-description: A real-time multiplayer tank game server built with Java and WebSocket
-implementation:
-  container:
-    image: tank-game-server:latest
+description: Tank Game multiplayer server - WebSocket-based real-time multiplayer tank battles
