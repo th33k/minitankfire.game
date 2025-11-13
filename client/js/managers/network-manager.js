@@ -4,6 +4,9 @@ export class NetworkManager {
         this.game = gameClient;
         this.ws = null;
         this.lobbyWs = null;
+        this.pingInterval = null;
+        this.lastPingTimestamp = null;
+        this.currentPing = 0;
     }
 
     connectToLobby(serverAddress) {
@@ -89,6 +92,39 @@ export class NetworkManager {
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.send(JSON.stringify(msg));
         }
+    }
+
+    startPingMonitoring() {
+        console.log('[PING] Starting ping monitoring...');
+        // Send ping every 2 seconds
+        this.pingInterval = setInterval(() => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                this.lastPingTimestamp = Date.now();
+                console.log('[PING] Sending ping at:', this.lastPingTimestamp);
+                this.sendMessage({ type: 'ping', timestamp: this.lastPingTimestamp.toString() });
+            }
+        }, 2000);
+    }
+
+    stopPingMonitoring() {
+        if (this.pingInterval) {
+            clearInterval(this.pingInterval);
+            this.pingInterval = null;
+        }
+    }
+
+    handlePong(timestamp) {
+        if (timestamp && this.lastPingTimestamp) {
+            const sentTime = parseInt(timestamp);
+            if (sentTime === this.lastPingTimestamp) {
+                this.currentPing = Date.now() - sentTime;
+                console.log('[PING] Received pong! RTT:', this.currentPing, 'ms');
+            }
+        }
+    }
+
+    getPing() {
+        return this.currentPing;
     }
 
     closeLobby() {

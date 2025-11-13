@@ -96,6 +96,10 @@ public class ClientHandler implements Runnable {
                     forwardVoiceSignal(data, message);
                     break;
 
+                case "ping":
+                    handlePing(data);
+                    break;
+
                 default:
                     System.out.println("[UNKNOWN] Message type: " + type);
             }
@@ -141,6 +145,18 @@ public class ClientHandler implements Runnable {
             // Reconstruct message with from field
             String forwardMsg = message.replace("}", ",\"from\":\"" + playerId + "\"}");
             gameRoom.sendToPlayer(target, forwardMsg);
+        }
+    }
+
+    private void handlePing(Map<String, String> data) {
+        String timestamp = data.get("timestamp");
+        if (timestamp != null) {
+            System.out.println("[PING] Received ping from " + playerId.substring(0, 8) +
+                    ", timestamp: " + timestamp);
+            // Echo back the ping with the same timestamp
+            String pongMessage = "{\"type\":\"pong\",\"timestamp\":\"" + timestamp + "\"}";
+            sendMessage(pongMessage);
+            System.out.println("[PING] Sent pong to " + playerId.substring(0, 8));
         }
     }
 

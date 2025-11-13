@@ -547,6 +547,76 @@ kbd {
   font-size: 1.2rem;
 }
 
+/* Ping indicator styles */
+.ping-indicator {
+  position: relative;
+}
+
+.ping-unit {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+.ping-indicator.ping-good i {
+  color: #00ff88;
+}
+
+.ping-indicator.ping-medium i {
+  color: #ffaa00;
+}
+
+.ping-indicator.ping-bad i {
+  color: #ff4444;
+}
+
+.ping-indicator.ping-good #ping-text {
+  color: #00ff88;
+}
+
+.ping-indicator.ping-medium #ping-text {
+  color: #ffaa00;
+}
+
+.ping-indicator.ping-bad #ping-text {
+  color: #ff4444;
+}
+
+/* FPS indicator styles */
+.fps-indicator {
+  position: relative;
+}
+
+.fps-unit {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-left: 2px;
+}
+
+.fps-indicator.fps-good i {
+  color: #00ff88;
+}
+
+.fps-indicator.fps-medium i {
+  color: #ffaa00;
+}
+
+.fps-indicator.fps-bad i {
+  color: #ff4444;
+}
+
+.fps-indicator.fps-good #fps-text {
+  color: #00ff88;
+}
+
+.fps-indicator.fps-medium #fps-text {
+  color: #ffaa00;
+}
+
+.fps-indicator.fps-bad #fps-text {
+  color: #ff4444;
+}
+
 #power-up-indicator {
   display: flex;
   gap: 15px;

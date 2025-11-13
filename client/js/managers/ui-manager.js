@@ -118,6 +118,8 @@ export class UIManager {
         const healthText = document.getElementById('health-text');
         const killsText = document.getElementById('kills-text');
         const deathsText = document.getElementById('deaths-text');
+        const pingText = document.getElementById('ping-text');
+        const fpsText = document.getElementById('fps-text');
         
         healthText.textContent = health;
         healthText.setAttribute('aria-label', `Health: ${health}`);
@@ -127,6 +129,54 @@ export class UIManager {
         
         deathsText.textContent = deaths;
         deathsText.setAttribute('aria-label', `Deaths: ${deaths}`);
+        
+        // Update ping display
+        const ping = this.game.networkManager.getPing();
+        if (pingText) {
+            // Show "..." if ping is exactly 0 (not yet measured)
+            if (ping === 0 && this.game.networkManager.lastPingTimestamp !== null) {
+                pingText.textContent = '...';
+            } else {
+                pingText.textContent = ping;
+            }
+            pingText.setAttribute('aria-label', `Ping: ${ping} milliseconds`);
+            
+            // Color code ping based on quality
+            const pingContainer = pingText.parentElement;
+            if (pingContainer) {
+                pingContainer.classList.remove('ping-good', 'ping-medium', 'ping-bad');
+                if (ping === 0) {
+                    // Neutral color while waiting for first pong
+                    pingContainer.classList.add('ping-medium');
+                } else if (ping < 50) {
+                    pingContainer.classList.add('ping-good');
+                } else if (ping < 100) {
+                    pingContainer.classList.add('ping-medium');
+                } else {
+                    pingContainer.classList.add('ping-bad');
+                }
+            }
+        }
+        
+        // Update FPS display
+        const fps = this.game.fps || 0;
+        if (fpsText) {
+            fpsText.textContent = fps;
+            fpsText.setAttribute('aria-label', `FPS: ${fps}`);
+            
+            // Color code FPS based on performance
+            const fpsContainer = fpsText.parentElement;
+            if (fpsContainer) {
+                fpsContainer.classList.remove('fps-good', 'fps-medium', 'fps-bad');
+                if (fps >= 50) {
+                    fpsContainer.classList.add('fps-good');
+                } else if (fps >= 30) {
+                    fpsContainer.classList.add('fps-medium');
+                } else if (fps > 0) {
+                    fpsContainer.classList.add('fps-bad');
+                }
+            }
+        }
         
         this.updatePowerUpIndicator(myPlayer);
         this.updateHeatBar(heatLevel, maxHeatLevel);

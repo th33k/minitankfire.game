@@ -39,6 +39,11 @@ class GameClient {
         this.playerName = null;
         this.serverAddress = null;
         
+        // FPS tracking
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastFpsUpdate = Date.now();
+        
         this.init();
     }
 
@@ -86,10 +91,14 @@ class GameClient {
         
         gameHud.setAttribute('aria-hidden', 'false');
         
+        // Start ping monitoring
+        this.networkManager.startPingMonitoring();
+        
         this.gameLoop();
     }
 
     onGameDisconnected() {
+        this.networkManager.stopPingMonitoring();
         this.uiManager.hideLoadingOverlay();
         this.uiManager.showNotification('Connection lost. Refreshing in 3 seconds...', 'error');
         setTimeout(() => location.reload(), 3000);
@@ -132,6 +141,9 @@ class GameClient {
                 break;
             case 'game_over':
                 this.handleGameOver(msg);
+                break;
+            case 'pong':
+                this.networkManager.handlePong(msg.timestamp);
                 break;
             case 'voice-offer':
                 this.voiceChatManager.handleOffer(msg);
@@ -288,6 +300,18 @@ class GameClient {
         this.sendMove();
         this.renderer.updateParticles();
         
+        // Calculate FPS
+        this.frameCount++;
+        const now = Date.now();
+        const elapsed = now - this.lastFpsUpdate;
+        
+        // Update FPS every second
+        if (elapsed >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / elapsed);
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
+        }
+        
         // Decay heat level
         this.heatLevel = Math.max(0, this.heatLevel - CONFIG.WEAPON.HEAT_DECAY_RATE);
         
@@ -316,5 +340,5 @@ class GameClient {
 
 // Start the game
 document.addEventListener('DOMContentLoaded', () => {
-    new GameClient();
+    window.gameClient = new GameClient();
 });
