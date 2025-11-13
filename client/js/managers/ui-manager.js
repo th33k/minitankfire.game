@@ -118,6 +118,7 @@ export class UIManager {
         const healthText = document.getElementById('health-text');
         const killsText = document.getElementById('kills-text');
         const deathsText = document.getElementById('deaths-text');
+        const pingText = document.getElementById('ping-text');
         
         healthText.textContent = health;
         healthText.setAttribute('aria-label', `Health: ${health}`);
@@ -127,6 +128,34 @@ export class UIManager {
         
         deathsText.textContent = deaths;
         deathsText.setAttribute('aria-label', `Deaths: ${deaths}`);
+        
+        // Update ping display
+        const ping = this.game.networkManager.getPing();
+        if (pingText) {
+            // Show "..." if ping is exactly 0 (not yet measured)
+            if (ping === 0 && this.game.networkManager.lastPingTimestamp !== null) {
+                pingText.textContent = '...';
+            } else {
+                pingText.textContent = ping;
+            }
+            pingText.setAttribute('aria-label', `Ping: ${ping} milliseconds`);
+            
+            // Color code ping based on quality
+            const pingContainer = pingText.parentElement;
+            if (pingContainer) {
+                pingContainer.classList.remove('ping-good', 'ping-medium', 'ping-bad');
+                if (ping === 0) {
+                    // Neutral color while waiting for first pong
+                    pingContainer.classList.add('ping-medium');
+                } else if (ping < 50) {
+                    pingContainer.classList.add('ping-good');
+                } else if (ping < 100) {
+                    pingContainer.classList.add('ping-medium');
+                } else {
+                    pingContainer.classList.add('ping-bad');
+                }
+            }
+        }
         
         this.updatePowerUpIndicator(myPlayer);
         this.updateHeatBar(heatLevel, maxHeatLevel);

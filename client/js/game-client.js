@@ -86,10 +86,14 @@ class GameClient {
         
         gameHud.setAttribute('aria-hidden', 'false');
         
+        // Start ping monitoring
+        this.networkManager.startPingMonitoring();
+        
         this.gameLoop();
     }
 
     onGameDisconnected() {
+        this.networkManager.stopPingMonitoring();
         this.uiManager.hideLoadingOverlay();
         this.uiManager.showNotification('Connection lost. Refreshing in 3 seconds...', 'error');
         setTimeout(() => location.reload(), 3000);
@@ -132,6 +136,9 @@ class GameClient {
                 break;
             case 'game_over':
                 this.handleGameOver(msg);
+                break;
+            case 'pong':
+                this.networkManager.handlePong(msg.timestamp);
                 break;
             case 'voice-offer':
                 this.voiceChatManager.handleOffer(msg);
@@ -316,5 +323,5 @@ class GameClient {
 
 // Start the game
 document.addEventListener('DOMContentLoaded', () => {
-    new GameClient();
+    window.gameClient = new GameClient();
 });

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Debug Helper</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff88;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 { color: #00ff88; }
+        .debug-box {
+            background: rgba(0, 255, 136, 0.05);
+            border: 2px solid #00ff88;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .status { 
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .ok { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+        .warn { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+        .error { background: rgba(255, 68, 68, 0.2); color: #ff4444; }
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #00ffaa; }
+        pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Ping Debug Helper</h1>
+    <p>Copy and paste these commands into your browser console (F12) while playing the game:</p>
+
+    <div class="debug-box">
+        <h3>1. Check if Game Client is Loaded</h3>
+        <pre>console.log('GameClient exists:', typeof window.gameClient !== 'undefined');</pre>
+        <p><strong>Expected:</strong> <code>GameClient exists: true</code></p>
+    </div>
+
+    <div class="debug-box">
+        <h3>2. Check if Ping Monitoring is Active</h3>
+        <pre>console.log('Ping monitoring active:', 
+    window.gameClient?.networkManager?.pingInterval !== null);</pre>
+        <p><strong>Expected:</strong> <code>Ping monitoring active: true</code></p>
+    </div>
+
+    <div class="debug-box">
+        <h3>3. Check Current Ping Value</h3>
+        <pre>console.log('Current ping:', 
+    window.gameClient?.networkManager?.getPing(), 'ms');</pre>
+        <p><strong>Expected:</strong> <code>Current ping: [some number] ms</code> (not 0 after a few seconds)</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>4. Check Last Ping Timestamp</h3>
+        <pre>console.log('Last ping sent:', 
+    new Date(window.gameClient?.networkManager?.lastPingTimestamp));</pre>
+        <p><strong>Expected:</strong> Recent timestamp (within last 2 seconds)</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>5. Check WebSocket Connection</h3>
+        <pre>console.log('WebSocket connected:', 
+    window.gameClient?.networkManager?.ws?.readyState === 1);</pre>
+        <p><strong>Expected:</strong> <code>WebSocket connected: true</code></p>
+    </div>
+
+    <div class="debug-box">
+        <h3>6. Check Ping Display Element</h3>
+        <pre>console.log('Ping text element:', 
+    document.getElementById('ping-text')?.textContent);</pre>
+        <p><strong>Expected:</strong> A number or "..." (not null or undefined)</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>7. Force Send Ping Now (Manual Test)</h3>
+        <pre>if (window.gameClient?.networkManager?.ws?.readyState === 1) {
+    let timestamp = Date.now();
+    window.gameClient.networkManager.lastPingTimestamp = timestamp;
+    window.gameClient.networkManager.sendMessage({
+        type: 'ping',
+        timestamp: timestamp.toString()
+    });
+    console.log('✓ Manually sent ping at:', timestamp);
+} else {
+    console.log('✗ WebSocket not connected!');
+}</pre>
+        <p><strong>Watch for:</strong> Server log showing received ping, then pong response in browser</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>8. Monitor Ping in Real-Time</h3>
+        <pre>let pingMonitor = setInterval(() => {
+    let ping = window.gameClient?.networkManager?.getPing();
+    let timestamp = window.gameClient?.networkManager?.lastPingTimestamp;
+    console.log(`[${new Date().toLocaleTimeString()}] Ping: ${ping}ms, Last sent: ${timestamp ? new Date(timestamp).toLocaleTimeString() : 'never'}`);
+}, 1000);
+
+// To stop monitoring, run:
+// clearInterval(pingMonitor);</pre>
+        <p><strong>Use this to:</strong> Watch ping updates live every second</p>
+    </div>
+
+    <div class="debug-box">
+        <h3>9. Full Diagnostic Report</h3>
+        <pre>console.log(`
+=== PING DIAGNOSTIC REPORT ===
+GameClient exists: ${typeof window.gameClient !== 'undefined'}
+Ping monitoring active: ${window.gameClient?.networkManager?.pingInterval !== null}
+Current ping: ${window.gameClient?.networkManager?.getPing()} ms
+Last ping timestamp: ${window.gameClient?.networkManager?.lastPingTimestamp}
+WebSocket state: ${window.gameClient?.networkManager?.ws?.readyState} (1 = OPEN)
+Ping text element: ${document.getElementById('ping-text')?.textContent}
+Ping element visible: ${document.getElementById('ping-text')?.offsetParent !== null}
+==============================
+`);</pre>
+        <p><strong>Copy-paste this:</strong> Get full status report</p>
+    </div>
+
+    <hr style="border-color: #00ff88; margin: 30px 0;">
+
+    <h2>🐛 Common Issues & Solutions</h2>
+
+    <div class="debug-box">
+        <h3>Issue: Ping shows "0" and never changes</h3>
+        <h4>Possible Causes:</h4>
+        <ul>
+            <li><strong>Server not handling ping:</strong> Check server logs for "[PING] Received ping"</li>
+            <li><strong>Pong not reaching client:</strong> Check browser console for "[PING] Received pong"</li>
+            <li><strong>Ping monitoring not started:</strong> Run check #2 above</li>
+        </ul>
+        <h4>Solutions:</h4>
+        <ol>
+            <li>Restart the server: <code>Ctrl+C</code> then <code>mvn exec:java</code></li>
+            <li>Hard refresh browser: <code>Ctrl+F5</code></li>
+            <li>Check F12 console for errors</li>
+            <li>Run diagnostic #9 above</li>
+        </ol>
+    </div>
+
+    <div class="debug-box">
+        <h3>Issue: Works in incognito but not in regular tab</h3>
+        <h4>Possible Causes:</h4>
+        <ul>
+            <li><strong>Cached old JavaScript:</strong> Regular tab using old code without ping feature</li>
+            <li><strong>Service Worker cache:</strong> Old files cached by service worker</li>
+            <li><strong>Browser cache:</strong> Old HTML/JS files</li>
+        </ul>
+        <h4>Solutions:</h4>
+        <ol>
+            <li><strong>Hard refresh:</strong> <code>Ctrl+Shift+R</code> or <code>Ctrl+F5</code></li>
+            <li><strong>Clear cache:</strong> F12 → Network tab → "Disable cache" checkbox</li>
+            <li><strong>Force reload all:</strong> F12 → Right-click refresh button → "Empty Cache and Hard Reload"</li>
+            <li><strong>Close all tabs:</strong> Close all game tabs, then reopen</li>
+        </ol>
+    </div>
+
+    <div class="debug-box">
+        <h3>Issue: Different tabs show different ping values</h3>
+        <h4>This is NORMAL!</h4>
+        <p>Each browser tab is a separate client with its own connection to the server. 
+        Each will have slightly different ping values based on:</p>
+        <ul>
+            <li>Different WebSocket connections</li>
+            <li>Different network timing</li>
+            <li>Different browser tab priority (background tabs may be throttled)</li>
+        </ul>
+        <p><strong>Expected behavior:</strong> All tabs should show ping values (not 0), but values may differ slightly.</p>
+    </div>
+
+    <hr style="border-color: #00ff88; margin: 30px 0;">
+
+    <h2>✅ Success Checklist</h2>
+    <div class="debug-box">
+        <p>After running the diagnostics, you should see:</p>
+        <ul>
+            <li>✓ GameClient exists: true</li>
+            <li>✓ Ping monitoring active: true</li>
+            <li>✓ Current ping: [not 0]</li>
+            <li>✓ WebSocket connected: true</li>
+            <li>✓ Ping text shows number in UI</li>
+            <li>✓ Server logs show "[PING] Received ping"</li>
+            <li>✓ Browser console shows "[PING] Received pong"</li>
+        </ul>
+        <p>If all checks pass, ping is working correctly!</p>
+    </div>
+
+    <p style="margin-top: 30px; text-align: center; color: #888;">
+        💡 Tip: Keep F12 Developer Tools open while testing to see real-time logs
+    </p>
+</body>
+</html>

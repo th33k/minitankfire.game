@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Feature Test</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #ffffff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff88;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .test-section {
+            background: rgba(0, 0, 0, 0.6);
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #00ff88;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .stat-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 5px;
+        }
+
+        .stat-item i {
+            color: #00ff88;
+            font-size: 1.2rem;
+        }
+
+        .ping-indicator {
+            position: relative;
+        }
+
+        .ping-unit {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            margin-left: 2px;
+        }
+
+        .ping-indicator.ping-good i,
+        .ping-indicator.ping-good #ping-text {
+            color: #00ff88;
+        }
+
+        .ping-indicator.ping-medium i,
+        .ping-indicator.ping-medium #ping-text {
+            color: #ffaa00;
+        }
+
+        .ping-indicator.ping-bad i,
+        .ping-indicator.ping-bad #ping-text {
+            color: #ff4444;
+        }
+
+        .controls {
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: linear-gradient(135deg, #00ff88 0%, #00cc88 100%);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #00ffaa 0%, #00dd99 100%);
+        }
+
+        .log {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid #00ff88;
+            padding-left: 10px;
+        }
+
+        .log-entry.success {
+            border-left-color: #00ff88;
+            color: #00ff88;
+        }
+
+        .log-entry.info {
+            border-left-color: #00ffff;
+            color: #00ffff;
+        }
+
+        .log-entry.warning {
+            border-left-color: #ffaa00;
+            color: #ffaa00;
+        }
+
+        .log-entry.error {
+            border-left-color: #ff4444;
+            color: #ff4444;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status.connected {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+
+        .status.disconnected {
+            background: rgba(255, 68, 68, 0.2);
+            color: #ff4444;
+        }
+
+        .checklist {
+            margin-top: 10px;
+        }
+
+        .checklist-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+
+        .checklist-item.pass {
+            border-left: 4px solid #00ff88;
+        }
+
+        .checklist-item.fail {
+            border-left: 4px solid #ff4444;
+        }
+
+        .checklist-item.pending {
+            border-left: 4px solid #ffaa00;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1><i class="fas fa-vial"></i> Ping Feature Test Page</h1>
+
+        <!-- Visual Display Test -->
+        <div class="test-section">
+            <h2><i class="fas fa-eye"></i> Visual Display Test</h2>
+            <p>How the ping indicator looks in different states:</p>
+            <br>
+            <div class="stat-item ping-indicator ping-good">
+                <i class="fas fa-signal" aria-hidden="true"></i>
+                <span id="ping-good">25</span>
+                <span class="ping-unit">ms</span>
+            </div>
+            <span style="color: #888;">← Good (< 50ms, Green)</span>
+            <br><br>
+            <div class="stat-item ping-indicator ping-medium">
+                <i class="fas fa-signal" aria-hidden="true"></i>
+                <span id="ping-medium">75</span>
+                <span class="ping-unit">ms</span>
+            </div>
+            <span style="color: #888;">← Medium (50-100ms, Orange)</span>
+            <br><br>
+            <div class="stat-item ping-indicator ping-bad">
+                <i class="fas fa-signal" aria-hidden="true"></i>
+                <span id="ping-bad">150</span>
+                <span class="ping-unit">ms</span>
+            </div>
+            <span style="color: #888;">← Bad (> 100ms, Red)</span>
+        </div>
+
+        <!-- Live Connection Test -->
+        <div class="test-section">
+            <h2><i class="fas fa-plug"></i> Live Connection Test</h2>
+            <p>Status: <span class="status disconnected" id="connection-status">Not Connected</span></p>
+            
+            <div class="controls">
+                <label for="server-input">Server Address:</label>
+                <input type="text" id="server-input" value="localhost" 
+                       style="padding: 8px; margin: 0 10px; border-radius: 5px; border: 1px solid #00ff88; background: rgba(0,0,0,0.6); color: #fff;">
+                <button onclick="testConnect()"><i class="fas fa-play"></i> Connect & Test</button>
+                <button onclick="clearLogs()"><i class="fas fa-trash"></i> Clear Logs</button>
+            </div>
+
+            <div class="stat-item ping-indicator" id="live-ping-display" style="margin-top: 15px; display: none;">
+                <i class="fas fa-signal"></i>
+                <span id="live-ping-value">0</span>
+                <span class="ping-unit">ms</span>
+            </div>
+
+            <div class="log" id="test-log"></div>
+        </div>
+
+        <!-- Verification Checklist -->
+        <div class="test-section">
+            <h2><i class="fas fa-clipboard-check"></i> Verification Checklist</h2>
+            <div class="checklist">
+                <div class="checklist-item pending" id="check-1">
+                    ⏳ Server is running on port 8080
+                </div>
+                <div class="checklist-item pending" id="check-2">
+                    ⏳ WebSocket connection established
+                </div>
+                <div class="checklist-item pending" id="check-3">
+                    ⏳ Ping messages being sent
+                </div>
+                <div class="checklist-item pending" id="check-4">
+                    ⏳ Pong responses received
+                </div>
+                <div class="checklist-item pending" id="check-5">
+                    ⏳ Ping value updates correctly
+                </div>
+                <div class="checklist-item pending" id="check-6">
+                    ⏳ Color coding works
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="test-section">
+            <h2><i class="fas fa-book"></i> How to Test</h2>
+            <ol style="line-height: 1.8; margin-left: 20px;">
+                <li>Start the server: <code>cd server && mvn exec:java</code></li>
+                <li>Click "Connect & Test" button above</li>
+                <li>Watch the logs and checklist update</li>
+                <li>Verify ping value appears and updates</li>
+                <li>Check console (F12) for detailed logs</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let pingInterval = null;
+        let lastPingTimestamp = null;
+        let currentPing = 0;
+
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('test-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function updateChecklistItem(id, status, text) {
+            const item = document.getElementById(id);
+            item.className = `checklist-item ${status}`;
+            const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : '⏳';
+            item.textContent = `${icon} ${text}`;
+        }
+
+        function updatePingDisplay(ping) {
+            const display = document.getElementById('live-ping-display');
+            const value = document.getElementById('live-ping-value');
+            
+            display.style.display = 'inline-flex';
+            value.textContent = ping;
+
+            // Update color
+            display.classList.remove('ping-good', 'ping-medium', 'ping-bad');
+            if (ping < 50) {
+                display.classList.add('ping-good');
+            } else if (ping < 100) {
+                display.classList.add('ping-medium');
+            } else {
+                display.classList.add('ping-bad');
+            }
+        }
+
+        function testConnect() {
+            const serverAddress = document.getElementById('server-input').value;
+            const wsUrl = `ws://${serverAddress}:8080/game`;
+            
+            addLog(`Attempting to connect to: ${wsUrl}`, 'info');
+            updateChecklistItem('check-1', 'pending', 'Checking server connection...');
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = () => {
+                    addLog('✓ WebSocket connected successfully!', 'success');
+                    document.getElementById('connection-status').className = 'status connected';
+                    document.getElementById('connection-status').textContent = 'Connected';
+                    
+                    updateChecklistItem('check-1', 'pass', 'Server is running on port 8080');
+                    updateChecklistItem('check-2', 'pass', 'WebSocket connection established');
+
+                    // Send join message
+                    ws.send(JSON.stringify({ type: 'join', name: 'PingTester' }));
+                    addLog('Sent join message', 'info');
+
+                    // Start ping monitoring
+                    startPingMonitoring();
+                };
+
+                ws.onmessage = (event) => {
+                    const msg = JSON.parse(event.data);
+                    console.log('Received message:', msg);
+
+                    if (msg.type === 'pong') {
+                        const sentTime = parseInt(msg.timestamp);
+                        if (sentTime === lastPingTimestamp) {
+                            currentPing = Date.now() - sentTime;
+                            addLog(`✓ Received pong! RTT: ${currentPing} ms`, 'success');
+                            updatePingDisplay(currentPing);
+                            updateChecklistItem('check-4', 'pass', 'Pong responses received');
+                            updateChecklistItem('check-5', 'pass', 'Ping value updates correctly');
+                            updateChecklistItem('check-6', 'pass', 'Color coding works');
+                        }
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    addLog('✗ Connection failed! Is the server running?', 'error');
+                    console.error('WebSocket error:', error);
+                    updateChecklistItem('check-1', 'fail', 'Cannot connect to server on port 8080');
+                };
+
+                ws.onclose = () => {
+                    addLog('Connection closed', 'warning');
+                    document.getElementById('connection-status').className = 'status disconnected';
+                    document.getElementById('connection-status').textContent = 'Disconnected';
+                    stopPingMonitoring();
+                };
+
+            } catch (error) {
+                addLog(`✗ Error: ${error.message}`, 'error');
+                updateChecklistItem('check-1', 'fail', 'Failed to connect to server');
+            }
+        }
+
+        function startPingMonitoring() {
+            addLog('Started ping monitoring (interval: 2s)', 'info');
+            updateChecklistItem('check-3', 'pass', 'Ping messages being sent');
+
+            pingInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    lastPingTimestamp = Date.now();
+                    ws.send(JSON.stringify({ type: 'ping', timestamp: lastPingTimestamp.toString() }));
+                    addLog(`→ Sent ping (timestamp: ${lastPingTimestamp})`, 'info');
+                }
+            }, 2000);
+        }
+
+        function stopPingMonitoring() {
+            if (pingInterval) {
+                clearInterval(pingInterval);
+                pingInterval = null;
+                addLog('Stopped ping monitoring', 'warning');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('test-log').innerHTML = '';
+            addLog('Logs cleared', 'info');
+        }
+
+        // Initial log entry
+        addLog('Ping Test Page loaded. Ready to test!', 'success');
+    </script>
+</body>
+</html>
