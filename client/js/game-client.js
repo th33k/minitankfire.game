@@ -39,6 +39,11 @@ class GameClient {
         this.playerName = null;
         this.serverAddress = null;
         
+        // FPS tracking
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastFpsUpdate = Date.now();
+        
         this.init();
     }
 
@@ -294,6 +299,18 @@ class GameClient {
     gameLoop() {
         this.sendMove();
         this.renderer.updateParticles();
+        
+        // Calculate FPS
+        this.frameCount++;
+        const now = Date.now();
+        const elapsed = now - this.lastFpsUpdate;
+        
+        // Update FPS every second
+        if (elapsed >= 1000) {
+            this.fps = Math.round((this.frameCount * 1000) / elapsed);
+            this.frameCount = 0;
+            this.lastFpsUpdate = now;
+        }
         
         // Decay heat level
         this.heatLevel = Math.max(0, this.heatLevel - CONFIG.WEAPON.HEAT_DECAY_RATE);

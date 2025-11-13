@@ -119,6 +119,7 @@ export class UIManager {
         const killsText = document.getElementById('kills-text');
         const deathsText = document.getElementById('deaths-text');
         const pingText = document.getElementById('ping-text');
+        const fpsText = document.getElementById('fps-text');
         
         healthText.textContent = health;
         healthText.setAttribute('aria-label', `Health: ${health}`);
@@ -153,6 +154,26 @@ export class UIManager {
                     pingContainer.classList.add('ping-medium');
                 } else {
                     pingContainer.classList.add('ping-bad');
+                }
+            }
+        }
+        
+        // Update FPS display
+        const fps = this.game.fps || 0;
+        if (fpsText) {
+            fpsText.textContent = fps;
+            fpsText.setAttribute('aria-label', `FPS: ${fps}`);
+            
+            // Color code FPS based on performance
+            const fpsContainer = fpsText.parentElement;
+            if (fpsContainer) {
+                fpsContainer.classList.remove('fps-good', 'fps-medium', 'fps-bad');
+                if (fps >= 50) {
+                    fpsContainer.classList.add('fps-good');
+                } else if (fps >= 30) {
+                    fpsContainer.classList.add('fps-medium');
+                } else if (fps > 0) {
+                    fpsContainer.classList.add('fps-bad');
                 }
             }
         }
