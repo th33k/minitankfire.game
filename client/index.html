@@ -16,6 +16,11 @@
         
         <!-- Join Screen -->
         <div id="join-screen" role="dialog" aria-labelledby="game-title" aria-modal="true">
+            <!-- Background Music for Login -->
+            <audio id="login-music" loop preload="auto" aria-hidden="true">
+                <source src="src/audio/login.mp3" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="join-content">
                 <h1 id="game-title" class="game-title">
                     <i class="fas fa-chess-rook" aria-hidden="true"></i> 
@@ -146,7 +151,10 @@
                     <div id="power-up-indicator" role="status" aria-label="Active power-ups"></div>
                 </div>
                 <div class="hud-section">
-                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat" aria-label="Toggle voice chat" aria-pressed="false">
+                    <button id="sound-toggle" class="icon-btn" title="Toggle Sound Effects & Music" aria-label="Toggle sound effects and background music" aria-pressed="true">
+                        <i class="fas fa-volume-up" aria-hidden="true"></i>
+                    </button>
+                    <button id="voice-toggle" class="icon-btn" title="Toggle Voice Chat & Login Music" aria-label="Toggle voice chat and login music" aria-pressed="false">
                         <i class="fas fa-microphone" aria-hidden="true"></i>
                     </button>
                     <button id="settings-btn" class="icon-btn" title="Settings" aria-label="Open settings" aria-haspopup="dialog">

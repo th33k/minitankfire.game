@@ -55,32 +55,62 @@ export class UIManager {
         joinForm.addEventListener('submit', handleSubmit);
         joinBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            this.game.playClickSound();
             handleSubmit();
         });
         
         serverAddressInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                playerNameInput.focus();
+                if (validateForm()) {
+                    // Trigger form submission
+                    joinForm.dispatchEvent(new Event('submit'));
+                } else {
+                    // If form is invalid, focus on the first invalid field
+                    if (!serverAddressInput.value.trim()) {
+                        serverAddressInput.focus();
+                    } else if (!playerNameInput.value.trim()) {
+                        playerNameInput.focus();
+                    }
+                }
             }
         });
         
         playerNameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                if (validateForm()) handleSubmit();
+                if (validateForm()) {
+                    // Trigger form submission instead of calling handleSubmit directly
+                    joinForm.dispatchEvent(new Event('submit'));
+                }
             }
         });
     }
 
     setupLobbyScreen() {
-        document.getElementById('lobby-join-btn').addEventListener('click', () => {
+        const joinBtn = document.getElementById('lobby-join-btn');
+        joinBtn.addEventListener('click', () => {
+            this.game.playClickSound();
             if (this.game.playerName && this.game.serverAddress) {
                 this.game.joinGame(this.game.playerName);
             } else {
                 this.showNotification('Please complete callsign entry first!', 'error');
             }
         });
+
+        // Add Enter key support for joining from lobby
+        const handleLobbyEnter = (e) => {
+            if (e.key === 'Enter' && !e.target.matches('input, textarea, select')) {
+                e.preventDefault();
+                joinBtn.click();
+            }
+        };
+
+        // Add listener when lobby is shown
+        document.addEventListener('keydown', handleLobbyEnter);
+        
+        // Store reference to remove listener later
+        this.lobbyEnterHandler = handleLobbyEnter;
     }
 
     showLobbyScreen() {
@@ -461,9 +491,27 @@ export class UIManager {
                 settingsPanel.remove();
             });
             
+            // Set initial checkbox states
+            document.getElementById('aim-line-toggle').checked = this.game.aimLineEnabled;
+            document.getElementById('sound-effects-toggle').checked = this.game.soundEffectsEnabled;
+            document.getElementById('screen-shake-toggle').checked = this.game.screenShakeEnabled;
+            
             document.getElementById('aim-line-toggle').addEventListener('change', (e) => {
                 onAimLineChange(e.target.checked);
                 this.showNotification(`Aim line ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+            });
+            
+            document.getElementById('sound-effects-toggle').addEventListener('change', (e) => {
+                this.game.soundEffectsEnabled = e.target.checked;
+                // Also control battle music as part of sound effects
+                this.game.battleMusic.muted = !e.target.checked;
+                this.game.inputManager.updateSoundToggleIcon();
+                this.showNotification(`Sound effects ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+            });
+            
+            document.getElementById('screen-shake-toggle').addEventListener('change', (e) => {
+                this.game.screenShakeEnabled = e.target.checked;
+                this.showNotification(`Screen shake ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
             });
             
             setTimeout(() => {
@@ -482,5 +530,10 @@ export class UIManager {
                 document.removeEventListener('click', this.closeSettingsOutside);
             }
         }
+    }
+
+    updateSoundEffectsVolume() {
+        // This method can be used to update volumes if needed in the future
+        // For now, sounds are muted by not playing them when disabled
     }
 }

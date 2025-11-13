@@ -38,11 +38,29 @@ class GameClient {
         this.aimLineEnabled = false;
         this.playerName = null;
         this.serverAddress = null;
+        this.soundEffectsEnabled = true;
+        this.screenShakeEnabled = true;
+        this.musicMuted = false;
         
         // FPS tracking
         this.fps = 0;
         this.frameCount = 0;
         this.lastFpsUpdate = Date.now();
+        
+        // Audio
+        this.attackSound = new Audio('src/audio/attack.mp3');
+        this.attackSound.volume = 0.4;
+        this.battleMusic = new Audio('src/audio/battel.mp3');
+        this.battleMusic.volume = 0.3;
+        this.battleMusic.loop = true;
+        this.deathSound = new Audio('src/audio/dead.mp3');
+        this.deathSound.volume = 0.5;
+        this.winSound = new Audio('src/audio/win.mp3');
+        this.winSound.volume = 0.6;
+        this.lossSound = new Audio('src/audio/loss.mp3');
+        this.lossSound.volume = 0.6;
+        this.clickSound = new Audio('src/audio/click.mp3');
+        this.clickSound.volume = 0.3;
         
         this.init();
     }
@@ -52,6 +70,63 @@ class GameClient {
         this.uiManager.setupJoinScreen();
         this.uiManager.setupLobbyScreen();
         this.voiceChatManager.init();
+        
+        // Start login music
+        this.startLoginMusic();
+    }
+
+    startLoginMusic() {
+        const loginMusic = document.getElementById('login-music');
+        if (loginMusic) {
+            loginMusic.volume = 0.3; // Set volume to 30%
+            loginMusic.muted = this.musicMuted; // Apply current mute state
+            loginMusic.play().catch(error => {
+                console.log('Autoplay blocked by browser, music will play on user interaction');
+                // Add click listener to play on first interaction
+                const playOnInteraction = () => {
+                    loginMusic.muted = this.musicMuted; // Apply mute state when user interaction starts music
+                    loginMusic.play();
+                    document.removeEventListener('click', playOnInteraction);
+                    document.removeEventListener('keydown', playOnInteraction);
+                };
+                document.addEventListener('click', playOnInteraction);
+                document.addEventListener('keydown', playOnInteraction);
+            });
+        }
+    }
+
+    stopLoginMusic() {
+        const loginMusic = document.getElementById('login-music');
+        if (loginMusic) {
+            loginMusic.pause();
+            loginMusic.currentTime = 0;
+        }
+    }
+
+    startBattleMusic() {
+        // Apply current sound effects mute state (battle music is part of sound effects)
+        this.battleMusic.muted = !this.soundEffectsEnabled;
+        this.battleMusic.play().catch(error => {
+            console.log('Battle music autoplay failed:', error);
+        });
+    }
+
+    toggleMusicMute() {
+        this.musicMuted = !this.musicMuted;
+        
+        // Mute/unmute login music only (battle music is controlled by sound effects)
+        const loginMusic = document.getElementById('login-music');
+        if (loginMusic) {
+            loginMusic.muted = this.musicMuted;
+        }
+        
+        return this.musicMuted;
+    }
+
+    playClickSound() {
+        if (!this.soundEffectsEnabled) return;
+        this.clickSound.currentTime = 0;
+        this.clickSound.play().catch(e => console.log('Click sound play failed'));
     }
 
     connectToLobby() {
@@ -93,6 +168,16 @@ class GameClient {
         
         // Start ping monitoring
         this.networkManager.startPingMonitoring();
+        
+        // Clean up lobby event listeners
+        if (this.uiManager.lobbyEnterHandler) {
+            document.removeEventListener('keydown', this.uiManager.lobbyEnterHandler);
+            this.uiManager.lobbyEnterHandler = null;
+        }
+        
+        // Stop login music and start battle music
+        this.stopLoginMusic();
+        this.startBattleMusic();
         
         this.gameLoop();
     }
@@ -192,6 +277,12 @@ class GameClient {
             this.isAlive = false;
             this.uiManager.showRespawnScreen();
             this.renderer.createExplosion(this.myPlayer.x, this.myPlayer.y, CONFIG.EFFECTS.EXPLOSION_PARTICLES, '#ff0000');
+            
+            // Play death sound
+            if (this.soundEffectsEnabled) {
+                this.deathSound.currentTime = 0;
+                this.deathSound.play().catch(e => console.log('Death sound play failed'));
+            }
         }
         
         if (msg.shooter === this.playerId) {
@@ -204,6 +295,18 @@ class GameClient {
 
     handleGameOver(msg) {
         this.isAlive = false;
+        
+        // Play win or loss sound
+        if (this.soundEffectsEnabled) {
+            if (msg.winnerId === this.playerId) {
+                this.winSound.currentTime = 0;
+                this.winSound.play().catch(e => console.log('Win sound play failed'));
+            } else {
+                this.lossSound.currentTime = 0;
+                this.lossSound.play().catch(e => console.log('Loss sound play failed'));
+            }
+        }
+        
         this.uiManager.showGameOverOverlay(msg);
     }
 
@@ -253,8 +356,16 @@ class GameClient {
                 heatLevel: Math.round(this.heatLevel)
             });
             
+            // Play attack sound
+            if (this.soundEffectsEnabled) {
+                this.attackSound.currentTime = 0; // Reset to start for rapid fire
+                this.attackSound.play().catch(e => console.log('Attack sound play failed'));
+            }
+            
             this.lastFireTime = now;
-            this.renderer.screenShake();
+            if (this.screenShakeEnabled) {
+                this.renderer.screenShake();
+            }
         }
     }
 

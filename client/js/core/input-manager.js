@@ -82,15 +82,33 @@ export class InputManager {
         const voiceBtn = document.getElementById('voice-toggle');
         if (voiceBtn) {
             voiceBtn.addEventListener('click', () => {
+                this.game.playClickSound();
+                
+                // Toggle music mute
+                const musicMuted = this.game.toggleMusicMute();
+                
+                // Update voice button icon to reflect music mute state
+                this.updateVoiceToggleIcon();
+                
+                // Toggle voice chat
                 this.game.voiceChatManager.toggle((msg, type) => {
                     this.game.uiManager.showNotification(msg, type);
                 });
+                
+                // Show notification about music state
+                this.game.uiManager.showNotification(
+                    `Music ${musicMuted ? 'muted' : 'unmuted'}`, 
+                    'info'
+                );
             });
+            // Initialize icon state
+            this.updateVoiceToggleIcon();
         }
         
         const sendBtn = document.getElementById('send-btn');
         if (sendBtn) {
             sendBtn.addEventListener('click', () => {
+                this.game.playClickSound();
                 this.game.sendChat();
             });
         }
@@ -98,6 +116,7 @@ export class InputManager {
         const chatToggleBtn = document.getElementById('chat-toggle');
         if (chatToggleBtn) {
             chatToggleBtn.addEventListener('click', () => {
+                this.game.playClickSound();
                 this.game.uiManager.chatOpen = !this.game.uiManager.chatOpen;
                 const chatPanel = document.getElementById('chat-panel');
                 chatPanel.style.height = this.game.uiManager.chatOpen ? 'auto' : '45px';
@@ -106,14 +125,69 @@ export class InputManager {
             });
         }
         
+        const soundBtn = document.getElementById('sound-toggle');
+        if (soundBtn) {
+            soundBtn.addEventListener('click', () => {
+                // Always play click sound for feedback, even when sound effects are disabled
+                if (this.game.clickSound) {
+                    this.game.clickSound.currentTime = 0;
+                    this.game.clickSound.play().catch(e => console.log('Click sound play failed'));
+                }
+                
+                this.game.soundEffectsEnabled = !this.game.soundEffectsEnabled;
+                // Also control battle music as part of sound effects
+                this.game.battleMusic.muted = !this.game.soundEffectsEnabled;
+                this.updateSoundToggleIcon();
+                this.game.uiManager.showNotification(
+                    `Sound effects ${this.game.soundEffectsEnabled ? 'enabled' : 'disabled'}`, 
+                    'info'
+                );
+            });
+            // Initialize icon state
+            this.updateSoundToggleIcon();
+        }
+        
         const settingsBtn = document.getElementById('settings-btn');
         if (settingsBtn) {
             settingsBtn.addEventListener('click', () => {
+                this.game.playClickSound();
                 this.game.uiManager.toggleSettings(
                     this.game.aimLineEnabled,
                     (enabled) => { this.game.aimLineEnabled = enabled; }
                 );
             });
+        }
+    }
+
+    updateSoundToggleIcon() {
+        const soundBtn = document.getElementById('sound-toggle');
+        if (soundBtn) {
+            const icon = soundBtn.querySelector('i');
+            if (icon) {
+                if (this.game.soundEffectsEnabled) {
+                    icon.className = 'fas fa-volume-up';
+                    soundBtn.setAttribute('aria-pressed', 'true');
+                } else {
+                    icon.className = 'fas fa-volume-mute';
+                    soundBtn.setAttribute('aria-pressed', 'false');
+                }
+            }
+        }
+    }
+
+    updateVoiceToggleIcon() {
+        const voiceBtn = document.getElementById('voice-toggle');
+        if (voiceBtn) {
+            const icon = voiceBtn.querySelector('i');
+            if (icon) {
+                if (this.game.musicMuted) {
+                    icon.className = 'fas fa-microphone-slash';
+                    voiceBtn.setAttribute('aria-pressed', 'true');
+                } else {
+                    icon.className = 'fas fa-microphone';
+                    voiceBtn.setAttribute('aria-pressed', 'false');
+                }
+            }
         }
     }
 
