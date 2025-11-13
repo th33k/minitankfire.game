@@ -165,6 +165,8 @@ class GameClient {
                 this.playerId = p.id;
                 this.myPlayer = p;
                 this.kills = p.score || 0;
+                this.health = p.health || 0;
+                this.isAlive = p.alive;
                 
                 if (p.lastPowerUpCollectTime && (!this.myPlayer || 
                     this.myPlayer.lastPowerUpCollectTime !== p.lastPowerUpCollectTime)) {
@@ -184,8 +186,10 @@ class GameClient {
 
     handleHit(msg) {
         if (msg.target === this.playerId) {
-            this.health -= 100;
+            // Only handle death (when health reaches 0)
+            // Server manages health deduction
             this.deaths++;
+            this.isAlive = false;
             this.uiManager.showRespawnScreen();
             this.renderer.createExplosion(this.myPlayer.x, this.myPlayer.y, CONFIG.EFFECTS.EXPLOSION_PARTICLES, '#ff0000');
         }

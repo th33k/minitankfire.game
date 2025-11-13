@@ -54,9 +54,9 @@ public class JsonUtil {
     public static String toJson(Player player) {
         return String.format(
                 "{\"id\":\"%s\",\"name\":\"%s\",\"x\":%d,\"y\":%d,\"angle\":%d,\"score\":%d," +
-                        "\"alive\":%b,\"hasShield\":%b,\"speedBoost\":%b,\"doubleFire\":%b}",
+                        "\"health\":%d,\"alive\":%b,\"hasShield\":%b,\"speedBoost\":%b,\"doubleFire\":%b}",
                 player.getId(), escapeJson(player.getName()), player.getX(), player.getY(),
-                player.getAngle(), player.getScore(), player.isAlive(), player.hasShield(),
+                player.getAngle(), player.getScore(), player.getHealth(), player.isAlive(), player.hasShield(),
                 player.hasSpeedBoost(), player.hasDoubleFire());
     }
 

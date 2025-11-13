@@ -10,6 +10,7 @@ public class Player {
     private int x, y;
     private int angle;
     private int score;
+    private int health;
     private boolean alive;
     private long lastRespawnTime;
     private boolean hasShield;
@@ -25,6 +26,7 @@ public class Player {
         this.id = id;
         this.name = name;
         this.score = 0;
+        this.health = 100;
         this.alive = true;
         this.hasShield = false;
         this.speedBoost = false;
@@ -44,6 +46,8 @@ public class Player {
     public void setAngle(int angle) { this.angle = angle; }
     public int getScore() { return score; }
     public void setScore(int score) { this.score = score; }
+    public int getHealth() { return health; }
+    public void setHealth(int health) { this.health = health; }
     public boolean isAlive() { return alive; }
     public void setAlive(boolean alive) { this.alive = alive; }
     public long getLastRespawnTime() { return lastRespawnTime; }

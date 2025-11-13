@@ -20,6 +20,7 @@ public class GameRoom {
     private static final int PLAYER_SPEED = 12;
     private static final int PLAYER_BOOST_SPEED = 20;
     private static final int BULLET_SPEED = 50;
+    private static final int BULLET_DAMAGE = 20;
     private static final int GAME_TICK_MS = 50; // 20 FPS
     private static final int RESPAWN_TIME_MS = 3000;
     private static final int SHIELD_DURATION_MS = 5000;
@@ -64,6 +65,7 @@ public class GameRoom {
         player.setX(random.nextInt(MAP_WIDTH));
         player.setY(random.nextInt(MAP_HEIGHT));
         player.setAngle(0);
+        player.setHealth(100);
         players.put(playerId, player);
         clientHandlers.put(playerId, clientHandler);
         System.out.println("[GAME] Player '" + name + "' joined. Total: " + players.size());
@@ -187,11 +189,7 @@ public class GameRoom {
 
         String bulletId = UUID.randomUUID().toString();
         
-        // Calculate damage based on heat level
-        // Base damage is 25, increases with heat level up to 40 at max heat (100)
-        int damage = 25 + (heatLevel / 4); // 25 + up to 25 = 50 max damage
-        
-        Bullet bullet = new Bullet(bulletId, playerId, player.getX(), player.getY(), dx, dy, damage);
+        Bullet bullet = new Bullet(bulletId, playerId, player.getX(), player.getY(), dx, dy, BULLET_DAMAGE);
         bullets.put(bulletId, bullet);
     }
 
@@ -251,22 +249,32 @@ public class GameRoom {
 
     private void handlePlayerHit(Player player, Bullet bullet) {
         if (!player.hasShield()) {
-            player.setAlive(false);
-            player.setLastRespawnTime(System.currentTimeMillis());
-            player.setScore(player.getScore() - 1);
+            // Deduct health based on bullet damage
+            int newHealth = player.getHealth() - bullet.getDamage();
+            player.setHealth(Math.max(0, newHealth));
+            
+            // Check if player died from this hit
+            if (player.getHealth() <= 0) {
+                player.setAlive(false);
+                player.setLastRespawnTime(System.currentTimeMillis());
+                player.setScore(player.getScore() - 1);
 
-            // Award point to shooter
-            Player shooter = players.get(bullet.getOwnerId());
-            if (shooter != null) {
-                shooter.setScore(shooter.getScore() + 1);
-                // Check winning condition
-                if (!gameOver && shooter.getScore() >= winningScore) {
-                    endGame(shooter);
+                // Award point to shooter
+                Player shooter = players.get(bullet.getOwnerId());
+                if (shooter != null) {
+                    shooter.setScore(shooter.getScore() + 1);
+                    // Check winning condition
+                    if (!gameOver && shooter.getScore() >= winningScore) {
+                        endGame(shooter);
+                    }
                 }
+                
+                String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
+                broadcastMessage(hitMessage);
+            } else {
+                // Player took damage but is still alive - broadcast health update
+                broadcastUpdate();
             }
-
-            String hitMessage = JsonUtil.createHitMessage(player.getId(), bullet.getOwnerId());
-            broadcastMessage(hitMessage);
         } else {
             player.setShield(false);
         }
@@ -382,6 +390,7 @@ public class GameRoom {
 
     private void respawnPlayer(Player player) {
         player.setAlive(true);
+        player.setHealth(100);
         player.setX(random.nextInt(MAP_WIDTH));
         player.setY(random.nextInt(MAP_HEIGHT));
         String respawnMessage = JsonUtil.createRespawnMessage(player.getId(), player.getX(), player.getY());

@@ -13,7 +13,7 @@ public class Bullet {
     private long creationTime;
 
     public Bullet(String id, String ownerId, int x, int y, int dx, int dy) {
-        this(id, ownerId, x, y, dx, dy, 25); // Default damage
+        this(id, ownerId, x, y, dx, dy, 20); // Default damage set to 20
     }
 
     public Bullet(String id, String ownerId, int x, int y, int dx, int dy, int damage) {
