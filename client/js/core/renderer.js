@@ -2,11 +2,12 @@ import { CONFIG } from '../core/config.js';
 
 // Renderer - Handles all canvas rendering
 export class Renderer {
-    constructor(canvas, minimapCanvas) {
+    constructor(canvas, minimapCanvas, game) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.minimapCanvas = minimapCanvas;
         this.minimapCtx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
+        this.game = game;
         this.particles = [];
     }
 
@@ -467,6 +468,7 @@ export class Renderer {
 
     renderMinimap(players, playerId) {
         if (!this.minimapCtx) return;
+        if (!this.game.showMinimap) return;
         
         const ctx = this.minimapCtx;
         ctx.clearRect(0, 0, CONFIG.MINIMAP.WIDTH, CONFIG.MINIMAP.HEIGHT);

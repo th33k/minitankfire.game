@@ -1167,6 +1167,7 @@ kbd {
   left: calc(20px + 40px + 12px);
   width: 240px;
   z-index: 50;
+  display: block;
 }
 
 #minimap {

@@ -14,8 +14,11 @@ class GameClient {
         this.uiManager = new UIManager(this);
         this.networkManager = new NetworkManager(this);
         this.voiceChatManager = new VoiceChatManager(this);
-        this.renderer = new Renderer(this.canvas, this.minimapCanvas);
+        this.renderer = new Renderer(this.canvas, this.minimapCanvas, this);
         this.inputManager = new InputManager(this);
+        
+        // Apply initial settings
+        this.applySettings();
         
         // Game state
         this.playerId = null;
@@ -41,6 +44,8 @@ class GameClient {
         this.soundEffectsEnabled = true;
         this.screenShakeEnabled = true;
         this.musicMuted = false;
+        this.showLeaderboard = true;
+        this.showMinimap = true;
         
         // FPS tracking
         this.fps = 0;
@@ -165,6 +170,9 @@ class GameClient {
         this.uiManager.showNotification(`Welcome, ${name}!`, 'success');
         
         gameHud.setAttribute('aria-hidden', 'false');
+        
+        // Apply settings now that game HUD is active
+        this.applySettings();
         
         // Start ping monitoring
         this.networkManager.startPingMonitoring();
@@ -450,6 +458,20 @@ class GameClient {
         this.updateHUD();
         
         requestAnimationFrame(() => this.gameLoop());
+    }
+    
+    applySettings() {
+        // Apply leaderboard visibility
+        const leaderboard = document.getElementById('leaderboard');
+        if (leaderboard) {
+            leaderboard.style.display = this.showLeaderboard ? 'block' : 'none';
+        }
+        
+        // Apply minimap visibility
+        const minimapContainer = document.getElementById('minimap-container');
+        if (minimapContainer) {
+            minimapContainer.style.display = this.showMinimap ? 'block' : 'none';
+        }
     }
 }
 

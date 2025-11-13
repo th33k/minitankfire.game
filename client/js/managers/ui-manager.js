@@ -289,6 +289,12 @@ export class UIManager {
                 </div>
             `;
         }).join('');
+        
+        // Apply hide leaderboard setting
+        const leaderboard = document.getElementById('leaderboard');
+        if (leaderboard) {
+            leaderboard.style.display = this.game.showLeaderboard ? 'block' : 'none';
+        }
     }
 
     addChatMessage(msg) {
@@ -476,7 +482,24 @@ export class UIManager {
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                </div>
+                    <div class="setting-item">
+                        <label for="show-leaderboard-toggle" class="setting-label">
+                            <i class="fas fa-list"></i> Show Leaderboard
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="show-leaderboard-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="setting-item">
+                        <label for="minimap-toggle" class="setting-label">
+                            <i class="fas fa-map"></i> Minimap
+                        </label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="minimap-toggle" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
             `;
             
             const gameHud = document.getElementById('game-hud');
@@ -491,10 +514,11 @@ export class UIManager {
                 settingsPanel.remove();
             });
             
-            // Set initial checkbox states
             document.getElementById('aim-line-toggle').checked = this.game.aimLineEnabled;
             document.getElementById('sound-effects-toggle').checked = this.game.soundEffectsEnabled;
             document.getElementById('screen-shake-toggle').checked = this.game.screenShakeEnabled;
+            document.getElementById('show-leaderboard-toggle').checked = this.game.showLeaderboard;
+            document.getElementById('minimap-toggle').checked = this.game.showMinimap;
             
             document.getElementById('aim-line-toggle').addEventListener('change', (e) => {
                 onAimLineChange(e.target.checked);
@@ -512,6 +536,24 @@ export class UIManager {
             document.getElementById('screen-shake-toggle').addEventListener('change', (e) => {
                 this.game.screenShakeEnabled = e.target.checked;
                 this.showNotification(`Screen shake ${e.target.checked ? 'enabled' : 'disabled'}`, 'info');
+            });
+            
+            document.getElementById('show-leaderboard-toggle').addEventListener('change', (e) => {
+                this.game.showLeaderboard = e.target.checked;
+                const leaderboard = document.getElementById('leaderboard');
+                if (leaderboard) {
+                    leaderboard.style.display = e.target.checked ? 'block' : 'none';
+                }
+                this.showNotification(`Leaderboard ${e.target.checked ? 'shown' : 'hidden'}`, 'info');
+            });
+            
+            document.getElementById('minimap-toggle').addEventListener('change', (e) => {
+                this.game.showMinimap = e.target.checked;
+                const minimapContainer = document.getElementById('minimap-container');
+                if (minimapContainer) {
+                    minimapContainer.style.display = e.target.checked ? 'block' : 'none';
+                }
+                this.showNotification(`Minimap ${e.target.checked ? 'shown' : 'hidden'}`, 'info');
             });
             
             setTimeout(() => {
