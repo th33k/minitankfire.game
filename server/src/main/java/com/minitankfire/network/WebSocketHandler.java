@@ -7,6 +7,7 @@ import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * WebSocket protocol handler (RFC 6455).
@@ -20,7 +21,26 @@ public class WebSocketHandler {
     private boolean connected;
     private String clientId;
 
-    private static final String WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    private static String WEBSOCKET_GUID;
+
+    static {
+        loadConfig();
+    }
+
+    private static void loadConfig() {
+        Properties props = new Properties();
+        try (InputStream input = WebSocketHandler.class.getClassLoader().getResourceAsStream("config.properties")) {
+            if (input != null) {
+                props.load(input);
+                WEBSOCKET_GUID = props.getProperty("websocket.guid", "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
+            } else {
+                WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            }
+        } catch (IOException e) {
+            System.err.println("[CONFIG] Error loading websocket.guid: " + e.getMessage());
+            WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        }
+    }
 
     public WebSocketHandler(Socket socket) throws IOException {
         this.socket = socket;

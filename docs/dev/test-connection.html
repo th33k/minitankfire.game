@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Protocol Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0e27;
+            color: #fff;
+        }
+        .card {
+            background: #1a1e3a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #00ff88;
+        }
+        h1 { color: #00ff88; }
+        h2 { color: #ffaa00; }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #00ff8822; color: #00ff88; }
+        .error { background: #ff000022; color: #ff6666; }
+        .info { background: #0088ff22; color: #66aaff; }
+        code {
+            background: #000;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #00ff88;
+        }
+        input, button {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 5px;
+            border: 1px solid #00ff88;
+            background: #000;
+            color: #fff;
+            font-size: 14px;
+        }
+        button {
+            cursor: pointer;
+            background: #00ff88;
+            color: #000;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00cc66;
+        }
+        #log {
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00ff88;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 WebSocket Protocol Test</h1>
+    
+    <div class="card">
+        <h2>Current Page Info</h2>
+        <div class="status info">
+            <strong>Page Protocol:</strong> <code id="page-protocol"></code><br>
+            <strong>Expected WS Protocol:</strong> <code id="ws-protocol"></code><br>
+            <strong>Page URL:</strong> <code id="page-url"></code>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Test Connection</h2>
+        <p>Enter your server address (e.g., <code>localhost</code> or <code>abc123.ngrok.io</code>)</p>
+        <input type="text" id="server-address" placeholder="localhost" value="localhost" style="width: 300px;">
+        <button onclick="testConnection()">Test Connection</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <div class="card">
+        <h2>Connection Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <div class="card">
+        <h2>Setup Status</h2>
+        <div id="setup-status"></div>
+    </div>
+
+    <script>
+        // Display current protocol
+        const pageProtocol = window.location.protocol;
+        const wsProtocol = pageProtocol === 'https:' ? 'wss:' : 'ws:';
+        
+        document.getElementById('page-protocol').textContent = pageProtocol;
+        document.getElementById('ws-protocol').textContent = wsProtocol;
+        document.getElementById('page-url').textContent = window.location.href;
+
+        // Log function
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.borderLeftColor = type === 'error' ? '#ff6666' : type === 'success' ? '#00ff88' : '#66aaff';
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Test connection
+        function testConnection() {
+            const serverAddress = document.getElementById('server-address').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!serverAddress) {
+                resultDiv.innerHTML = '<div class="status error">Please enter a server address</div>';
+                return;
+            }
+
+            const wsUrl = `${wsProtocol}//${serverAddress}:8080/game`;
+            
+            log(`Testing connection to: ${wsUrl}`);
+            resultDiv.innerHTML = '<div class="status info">Connecting...</div>';
+
+            try {
+                const ws = new WebSocket(wsUrl);
+                
+                const timeout = setTimeout(() => {
+                    if (ws.readyState !== WebSocket.OPEN) {
+                        ws.close();
+                        resultDiv.innerHTML = '<div class="status error">Connection timeout (10s)</div>';
+                        log('Connection timeout', 'error');
+                    }
+                }, 10000);
+
+                ws.onopen = () => {
+                    clearTimeout(timeout);
+                    resultDiv.innerHTML = `
+                        <div class="status success">
+                            ✓ Connected successfully!<br>
+                            <strong>URL:</strong> <code>${wsUrl}</code><br>
+                            <strong>Ready State:</strong> OPEN
+                        </div>
+                    `;
+                    log(`✓ Connected to ${wsUrl}`, 'success');
+                    ws.close();
+                };
+
+                ws.onerror = (error) => {
+                    clearTimeout(timeout);
+                    resultDiv.innerHTML = `
+                        <div class="status error">
+                            ✗ Connection failed<br>
+                            <strong>URL:</strong> <code>${wsUrl}</code><br>
+                            <strong>Check:</strong> Server running? Correct address?
+                        </div>
+                    `;
+                    log(`✗ Connection failed: ${error}`, 'error');
+                };
+
+                ws.onclose = () => {
+                    log('Connection closed');
+                };
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">
+                        ✗ Error: ${error.message}<br>
+                        <strong>This is likely a mixed content error</strong>
+                    </div>
+                `;
+                log(`✗ Exception: ${error.message}`, 'error');
+            }
+        }
+
+        // Check setup status
+        function checkSetup() {
+            const statusDiv = document.getElementById('setup-status');
+            let status = '';
+
+            if (pageProtocol === 'https:') {
+                status += '<div class="status success">✓ Page loaded over HTTPS (GitHub Pages)</div>';
+                status += '<div class="status success">✓ Will use WSS (secure WebSocket)</div>';
+                status += '<div class="status info">ℹ Server must support WSS or use tunnel (ngrok/Cloudflare)</div>';
+            } else {
+                status += '<div class="status info">ℹ Page loaded over HTTP (local)</div>';
+                status += '<div class="status success">✓ Will use WS (regular WebSocket)</div>';
+                status += '<div class="status success">✓ Direct connection to local server works</div>';
+            }
+
+            statusDiv.innerHTML = status;
+        }
+
+        // Initialize
+        log('Protocol test page loaded');
+        log(`Detected protocol: ${pageProtocol} → ${wsProtocol}`);
+        checkSetup();
+    </script>
+</body>
+</html>

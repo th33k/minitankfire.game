@@ -1,788 +1,555 @@
-#  Project Architecture & Technical Design
-
-## Table of Contents
-
-1. [System Overview](#system-overview)
-2. [Server Architecture](#server-architecture)
-3. [Package Structure](#package-structure)
-4. [Client Architecture](#client-architecture)
-5. [Network Protocol](#network-protocol)
-6. [Data Structures](#data-structures)
-7. [Threading Model](#threading-model)
-8. [Technology Stack](#technology-stack)
-
----
+# Architecture Documentation
 
 ## System Overview
 
-**Mini Tank Fire** is a real-time multiplayer online game built using a **Client-Server Architecture** with **WebSocket** communication.
+Tank Arena is a real-time multiplayer game built with a client-server architecture using WebSocket communication. The system is designed with separation of concerns, where the server handles authoritative game state and physics, while clients render the game and handle user input.
 
-### High-Level Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Browser Clients                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     ┌───────────────┐ │
-│  │  Client 1    │  │  Client 2    │  │  Client N    │     │  Spectator /  │ │
-│  │ HTML5 Canvas │  │ HTML5 Canvas │  │ HTML5 Canvas │     │  Web Viewer   │ │
-│  │ WebSocket    │  │ WebSocket    │  │ WebSocket    │     │  (read-only)  │ │
-│  │ (game +      │  │ (game +      │  │ (game +      │     │  WebSocket    │ │
-│  │  signaling)  │  │  signaling)  │  │  signaling)  │     │               │ │
-│  │ WebRTC (P2P) │  │ WebRTC (P2P) │  │ WebRTC (P2P) │     │               │ │
-│  │ (voice chat) │  │ (voice chat) │  │ (voice chat) │     │               │ │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘     └──────┬────────┘ │
-└─────────┼──────────────────┼──────────────────┼───────────────────┼─────────┘
-          │                  │                  │                   │
-          │                  │                  │                   │
-          │                  │                  │                   │
-          ├──────────────────┴──────────────────┴───────────────────┤
-          │            WebSocket (game & signaling) : TCP 8080       │
-          │      (server also provides WebRTC signaling / STUN/TURN)│
-          ▼                                                          │
-  ┌────────────────────────────────────────────────────────────────┐  │
-  │                  Tank Game Server (Java)                       │  │
-  │                                                                │  │
-  │  ┌──────────────────────────────────────────────────────────┐  │  │
-  │  │ GameServer / Network Layer                                │  │  │
-  │  │ - Listens on TCP 8080 (WebSocket)                         │  │  │
-  │  │ - Handles HTTP upgrade / WS handshake                     │  │  │
-  │  │ - Provides signaling for WebRTC (voice)                   │  │  │
-  │  │ - Optional STUN/TURN integration (if available)           │  │  │
-  │  └──────────────────────────────────────────────────────────┘  │  │
-  │                                                                │  │
-  │  ┌──────────────────────────────────────────────────────────┐  │  │
-  │  │ GameRoom (Dedicated game loop thread)                     │  │  │
-  │  │ - Game logic & state (players, bullets, power-ups)        │  │  │
-  │  │ - Physics, collision detection, respawn & scoring         │  │  │
-  │  │ - Broadcasts periodic update messages to clients         │  │  │
-  │  └──────────────────────────────────────────────────────────┘  │  │
-  │                                                                │  │
-  │  ┌──────────────────────────────────────────────────────────┐  │  │
-  │  │ ClientHandler / Worker Threads                            │  │  │
-  │  │ - Per-connection message I/O and dispatch                 │  │  │
-  │  │ - Routes move/fire/chat/voice-signaling messages to GameRoom │ │  │
-  │  └──────────────────────────────────────────────────────────┘  │  │
-  │                                                                │  │
-  └────────────────────────────────────────────────────────────────┘  │
-                                                                     │
-  Note: WebRTC voice is peer-to-peer between browsers; server only
-  performs signaling over WebSocket (and may assist with NAT traversal
-  via STUN/TURN if configured).
-```
-
----
-
-## Server Architecture
-
-### Package Organization
-
-The server is organized into **5 focused packages** for clarity and maintainability:
-
-```
-com/minitankfire/
-├── server/           Server bootstrap & lifecycle
-│   └── GameServer.java
-├── network/          Network & WebSocket protocol
-│   ├── WebSocketHandler.java
-│   └── ClientHandler.java
-├── game/             Game logic & state management
-│   └── GameRoom.java
-├── model/            Game entity data structures
-│   ├── Player.java
-│   ├── Bullet.java
-│   └── PowerUp.java
-└── util/             Utility functions
-    └── JsonUtil.java
-```
-
-**Benefits:**
-
-- ✅ Clear separation of concerns
-- ✅ Easy to locate specific functionality
-- ✅ Independent testing per package
-- ✅ Scalable for future enhancements
-- ✅ Reduced code coupling
-
-### Core Components
-
-#### 1. **GameServer** (`server/GameServer.java`)
-
-**Responsibility**: Bootstrap and manage the WebSocket server lifecycle
-
-**Key Features**:
-
-- Creates `ServerSocket` listening on port 8080
-- Manages thread pool (ExecutorService) for concurrent clients
-- Accepts incoming client connections
-- Graceful shutdown handling with Ctrl+C support
-- Configurable port via command-line arguments
-
-**Package**: `com.minitankfire.server`
-
-**Location**: `server/src/main/java/com/minitankfire/server/GameServer.java`
-
-**Main Methods**:
-
-- `main(String[] args)` - Entry point
-- `start()` - Server loop (accepts connections)
-- `shutdown()` - Graceful cleanup
-
-**Threading**:
-
-- Main thread accepts connections
-- Thread pool runs ClientHandler tasks (max 100 concurrent)
-- GameRoom runs separate dedicated game loop thread
-
----
-
-#### 2. **ClientHandler** (`network/ClientHandler.java`)
-
-**Responsibility**: Handle individual client connections
-
-**Key Features**:
-
-- Manages per-client WebSocket connection (runs in thread pool)
-- Routes incoming messages to appropriate handlers
-- Separates message handling logic into focused methods
-- Cleans up resources on disconnection
-
-**Package**: `com.minitankfire.network`
-
-**Location**: `network/src/main/java/com/minitankfire/network/ClientHandler.java`
-
-**Message Flow**:
-
-```
-1. Client connects (TCP connection)
-2. WebSocket handshake performed
-3. Client sends "join" message
-4. Handler routes to GameRoom.addPlayer()
-5. Handler enters receive loop:
-   - Reads message from client
-   - Parses JSON to identify type
-   - Dispatches to specialized handler method
-   - Repeats until disconnection
-```
-
-**Supported Message Types**:
-
-- `join` - Player joins game
-- `move` - Position and angle update
-- `fire` - Fire weapon
-- `chat` - Text message
-- `voice-*` - WebRTC voice signals
-
-**Thread Safety**:
-
-- Each client runs in its own thread (from pool)
-- Uses thread-safe GameRoom APIs
-- No synchronization needed on per-client data
-
----
-
-#### 3. **GameRoom** (`game/GameRoom.java`)
-
-**Responsibility**: Core game logic and state management
-
-**Key Features**:
-
-- Manages game entities: Players, Bullets, PowerUps
-- Runs game loop at 20 FPS in dedicated thread
-- Physics engine (collision detection)
-- Scoring system
-- Power-up spawning and management
-- Broadcasting game state to all clients
-- Respawn logic and duration management
-
-**Package**: `com.minitankfire.game`
-
-**Location**: `game/src/main/java/com/minitankfire/game/GameRoom.java`
-
-**Data Collections** (All Thread-Safe):
-
-```java
-private Map<String, Player> players = new ConcurrentHashMap<>();
-private Map<String, Bullet> bullets = new ConcurrentHashMap<>();
-private Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
-private Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
-```
-
-**Game Constants** (Configurable):
-
-```java
-MAP_WIDTH = 1920                           // Canvas width
-MAP_HEIGHT = 1080                          // Canvas height
-PLAYER_SPEED = 3                          // pixels/frame
-BULLET_SPEED = 8                          // pixels/frame
-GAME_TICK_MS = 50                         // 20 FPS
-RESPAWN_TIME_MS = 3000                    // 3 seconds
-SHIELD_DURATION_MS = 5000                 // 5 seconds
-SPEED_BOOST_DURATION_MS = 3000            // 3 seconds
-DOUBLE_FIRE_DURATION_MS = 10000           // 10 seconds
-```
-
-**Game Loop** (20 FPS = 50ms per tick):
-
-```
-1. Update bullet positions
-   ├─ Move each bullet by velocity
-   ├─ Remove expired or out-of-bounds bullets
-   └─ Check for 3-second lifetime
-
-2. Check collisions
-   ├─ Bullet vs Player (with shield detection)
-   ├─ Power-up collection
-   └─ Handle hits and deaths
-
-3. Update power-ups
-   ├─ Remove expired power-ups
-   ├─ Randomly spawn new ones
-   └─ Update on-map availability
-
-4. Update player power-up durations
-   ├─ Shield expiration
-   ├─ Speed boost expiration
-   └─ Double fire expiration
-
-5. Respawn dead players
-   ├─ Check respawn timer (3s cooldown)
-   ├─ Reset health and position
-   └─ Make player alive
-
-6. Broadcast updated state to all clients
-   └─ Send players, bullets, powerups data
-```
-
-**Main Methods**:
-
-- `addPlayer(String, String, ClientHandler)` - Player joins
-- `removePlayer(String)` - Player leaves
-- `handleMove(String, int, int, int)` - Update position
-- `handleFire(String)` - Fire bullet
-- `handleChat(String, String)` - Chat message
-- `updateGameState()` - Game loop tick
-- `broadcastUpdate()` - Send state to clients
-
----
-
-#### 4. **WebSocketHandler** (`network/WebSocketHandler.java`)
-
-**Responsibility**: Implement WebSocket protocol (RFC 6455)
-
-**Key Features**:
-
-- WebSocket handshake negotiation
-- Frame encoding/decoding (text frames, ping/pong, close)
-- Payload masking/unmasking
-- Binary protocol parsing
-- Pure Java implementation (no external libraries)
-- Connection lifecycle management
-
-**Package**: `com.minitankfire.network`
-
-**Location**: `network/src/main/java/com/minitankfire/network/WebSocketHandler.java`
-
-**Handshake Process**:
-
-```
-Client HTTP Request:
-  GET / HTTP/1.1
-  Host: localhost:8080
-  Upgrade: websocket
-  Connection: Upgrade
-  Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
-
-Server HTTP Response:
-  HTTP/1.1 101 Switching Protocols
-  Upgrade: websocket
-  Connection: Upgrade
-  Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
-```
-
-**Message Frame Format** (RFC 6455):
-
-```
- 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
-+-+-+-+-+-------+-+-------------+
-|F|R|R|R| opcode|M| Payload len |
-|I|S|S|S|(4)    |A|             |
-|N|V|V|V|       |S|             |
-+-+-+-+-+-------+-+-------------+
-
-Frame types:
-- 0x1: Text frame
-- 0x8: Close frame
-- 0x9: Ping frame
-- 0xA: Pong frame
-```
-
-**Main Methods**:
-
-- `performHandshake()` - HTTP upgrade negotiation
-- `readMessage()` - Decode WebSocket frame
-- `sendMessage(String)` - Encode and send frame
-- `close()` - Close connection
-
----
-
-#### 5. **Game Models** (`model/` package)
-
-**Player.java** - Represents a tank in the game
-
-```java
-String id                      // Unique identifier (UUID)
-String name                    // Player's callsign
-int x, y                       // Position on map
-int angle                      // Rotation (0-359°)
-int score                      // Kills - Deaths
-boolean alive                  // Death/alive status
-long lastRespawnTime           // Last death timestamp
-boolean hasShield              // Shield active flag
-long shieldEndTime             // When shield expires
-boolean speedBoost             // Speed boost active
-long speedBoostEndTime         // When speed expires
-boolean doubleFire             // Double fire active
-long doubleFireEndTime         // When double fire expires
-```
-
-**Bullet.java** - Represents a projectile
-
-```java
-String id                      // Unique identifier (UUID)
-String ownerId                 // Who fired it
-int x, y                       // Position
-int dx, dy                     // Velocity per frame
-long creationTime              // Spawn timestamp (for expiration)
-```
-
-**PowerUp.java** - Represents collectible items
-
-```java
-String id                      // Unique identifier (UUID)
-Type type                      // SHIELD, SPEED_BOOST, or DOUBLE_FIRE
-int x, y                       // Position on map
-long spawnTime                 // Spawn timestamp (for expiration)
-```
-
-**Package**: `com.minitankfire.model`
-
-**Location**: `model/src/main/java/com/minitankfire/model/`
-
----
-
-#### 6. **Utilities** (`util/JsonUtil.java`)
-
-**Responsibility**: JSON serialization/deserialization (NO external libraries!)
-
-**Features**:
-
-- Serialize Java objects to JSON strings
-- Deserialize JSON strings to Java objects
-- Custom handlers for Player, Bullet, PowerUp
-- String escaping for special characters
-- Message factory methods
-
-**Package**: `com.minitankfire.util`
-
-**Location**: `util/src/main/java/com/minitankfire/util/JsonUtil.java`
-
-**Methods**:
-
-- `toJson(Object)` - Object → JSON string
-- `parseJson(String)` - JSON string → Map
-- `createUpdateMessage()` - Game state broadcast
-- `createChatMessage()` - Chat message
-- `createHitMessage()` - Collision notification
-
-**Example**:
-
-```java
-String json = JsonUtil.toJson(player);
-// {"id":"abc-123","name":"Player1","x":400,"y":300,"angle":45,"score":5,...}
-
-Map<String, String> data = JsonUtil.parseJson(json);
-// {id=abc-123, name=Player1, x=400, y=300, angle=45, score=5, ...}
-```
-
----
-
-## Client Architecture
-
-### Frontend Stack
-
-**HTML** (`index.html`):
-- Canvas element (1920×1080) for game rendering
-- HUD panels (stats, leaderboard, chat)
-- Join screen overlay
-- Responsive layout
-
-**CSS** (`style.css`):
-
-- Neon-themed styling
-- Dark background with glowing accents
-- Responsive grid system
-- Smooth animations and transitions
-
-**JavaScript** (`game.js`, `game-client.js`, `core/`, `managers/`):
-
-#### GameClient Class
-
-**Main Controller** - orchestrates all client-side logic
-
-**Modular Architecture**:
-- **game.js**: Main GameClient class and core game loop
-- **game-client.js**: Client-side utilities and helpers
-- **core/**: Core systems (config, input, renderer)
-- **managers/**: Specialized managers (network, UI, voice chat)
-
-**Key Methods**:
-
-```javascript
-constructor(); // Initialize game state
-init(); // Setup event listeners and screens
-setupEventListeners(); // Keyboard, mouse, UI events
-connect(); // WebSocket connection
-handleMessage(); // Process server messages
-update(); // Update game state
-render(); // Draw to canvas
-```
-
-**Game State**:
-
-```javascript
-playerId: string (assigned by server)
-myPlayer: object (own player data)
-players: {} (other players)
-bullets: {} (all bullets)
-powerUps: {} (all power-ups)
-particles: [] (visual effects)
-
-// Input state
-keys: {} (keyboard state)
-mouseX, mouseY: int (cursor position)
-angle: int (tank rotation)
-
-// Game stats
-kills: int
-deaths: int
-health: int
-isAlive: boolean
-```
-
-#### Rendering Pipeline
-
-```
-60 FPS Animation Frame Loop
-  1. Update player position (WASD)
-  2. Update rotation (mouse angle)
-  3. Render game background
-  4. Render power-ups
-  5. Render other players
-  6. Render bullets
-  7. Render particles (explosions)
-  8. Render HUD (stats, leaderboard)
-  9. Render minimap
-```
-
-#### Input Handling
-
-**Keyboard** (WASD Movement):
-
-```javascript
-W: move up (y -= speed)
-A: move left (x -= speed)
-S: move down (y += speed)
-D: move right (x += speed)
-```
-
-**Mouse** (Aiming):
-
-```javascript
-mousemove: calculate angle from player to cursor
-click: fire bullet
-```
-
-#### WebSocket Communication
-
-**Connection**:
-
-```javascript
-this.ws = new WebSocket("ws://hostname:8080");
-```
-
-**Message Types Sent**:
-
-- `join`: Player joins game
-- `move`: Player position and angle
-- `fire`: Player fires bullet
-- `chat`: Text message
-- `voice-*`: WebRTC initialization
-
-**Message Types Received**:
-
-- `update`: Game state update
-- `hit`: Collision occurred
-- `chat`: Chat message
-- `respawn`: Player respawned
-- `voice-*`: WebRTC signals
-
----
-
-## Network Protocol
-
-### Message Format
-
-All messages are JSON-encoded strings sent over WebSocket:
-
-```json
-{
-  "type": "message_type",
-  "data": {
-    /* type-specific data */
-  }
-}
-```
-
-### Message Specifications
-
-#### JOIN (Client → Server)
-
-```json
-{
-  "type": "join",
-  "name": "PlayerName"
-}
-```
-
-#### MOVE (Client → Server)
-
-```json
-{
-  "type": "move",
-  "x": 400,
-  "y": 300,
-  "angle": 45
-}
-```
-
-#### FIRE (Client → Server)
-
-```json
-{
-  "type": "fire"
-}
-```
-
-#### UPDATE (Server → Broadcast)
-
-```json
-{
-  "type": "update",
-  "players": [
-    {
-      "id": "p1",
-      "name": "Player1",
-      "x": 100,
-      "y": 200,
-      "angle": 45,
-      "score": 5,
-      "alive": true,
-      "hasShield": false,
-      "speedBoost": false,
-      "doubleFire": false
-    }
-  ],
-  "bullets": [
-    { "id": "b1", "ownerId": "p1", "x": 150, "y": 220, "dx": 8, "dy": 0 }
-  ],
-  "powerUps": [{ "id": "pu1", "type": "SHIELD", "x": 400, "y": 300 }]
-}
-```
-
-#### CHAT (Both Directions)
-
-```json
-{
-  "type": "chat",
-  "msg": "Hello everyone!"
-}
-```
-
-#### HIT (Server → Broadcast)
-
-```json
-{
-  "type": "hit",
-  "target": "player-id-2",
-  "shooter": "player-id-1"
-}
-```
-
-#### RESPAWN (Server → Client)
-
-```json
-{
-  "type": "respawn",
-  "playerId": "player-id",
-  "x": 400,
-  "y": 300
-}
-```
-
----
-
-## Data Structures
-
-### Server-Side Collections
-
-#### ConcurrentHashMap Usage
-
-Thread-safe maps used for concurrent access:
-
-```java
-// Players currently in game
-Map<String, Player> players = new ConcurrentHashMap<>();
-
-// Bullets in flight
-Map<String, Bullet> bullets = new ConcurrentHashMap<>();
-
-// Available power-ups on map
-Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
-
-// Connected client handlers
-Map<String, ClientHandler> clientHandlers = new ConcurrentHashMap<>();
-```
-
-**Why ConcurrentHashMap?**
-
-- Multiple ClientHandler threads read/write simultaneously
-- No need for external synchronization (faster than synchronized maps)
-- Supports atomic operations like `putIfAbsent()`
-- Iterators fail-safe (don't throw ConcurrentModificationException)
-
-#### Game Loop State
-
-```java
-private long gameStartTime;        // Server start time
-private volatile boolean gameRunning = true;  // Game state flag
-private Thread gameLoopThread;     // Dedicated loop thread
-```
-
----
-
-## Threading Model
-
-### Thread Organization
+## Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Main Thread                                                 │
-│  ├─ Start ServerSocket on port 8080                         │
-│  ├─ Create ExecutorService (100 threads max)                │
-│  └─ Accept loop (blocks on serverSocket.accept())           │
-└─────────────┬───────────────────────────────────────────────┘
-              │
-    ┌─────────┴──────────────────────────────────┐
-    ▼                                            ▼
-Thread Pool (0-100 ClientHandler threads)   Game Loop Thread
-├─ ClientHandler #1                         (Dedicated)
-├─ ClientHandler #2                         - Runs every 50ms
-├─ ClientHandler #N                         - Updates game state
-└─ ...                                       - Broadcasts updates
+│                         CLIENT TIER                          │
+│  ┌────────────┐  ┌────────────┐  ┌────────────┐            │
+│  │   HTML5    │  │    CSS3    │  │ JavaScript │            │
+│  │   Canvas   │  │  Styling   │  │   ES6+     │            │
+│  └────────────┘  └────────────┘  └────────────┘            │
+│         │                │                │                  │
+│         └────────────────┴────────────────┘                  │
+│                          │                                   │
+│            ┌─────────────┴─────────────┐                    │
+│            │    Game Client Manager     │                    │
+│            │  - Renderer                │                    │
+│            │  - Input Manager           │                    │
+│            │  - Network Manager         │                    │
+│            │  - UI Manager              │                    │
+│            │  - Voice Chat Manager      │                    │
+│            └─────────────┬─────────────┘                    │
+└──────────────────────────┼──────────────────────────────────┘
+                           │ WebSocket (ws://)
+                           │ JSON Messages
+                           │
+┌──────────────────────────┼──────────────────────────────────┐
+│                SERVER TIER│                                  │
+│            ┌─────────────┴─────────────┐                    │
+│            │    GameServer (TCP)        │                    │
+│            │  - ServerSocket (8080)     │                    │
+│            │  - ExecutorService         │                    │
+│            │  - Client Thread Pool      │                    │
+│            └─────────────┬─────────────┘                    │
+│                          │                                   │
+│         ┌────────────────┼────────────────┐                 │
+│         │                │                │                 │
+│  ┌──────▼──────┐  ┌──────▼──────┐  ┌──────▼──────┐        │
+│  │  WebSocket  │  │   Client    │  │   Game      │        │
+│  │   Handler   │  │   Handler   │  │   Room      │        │
+│  │             │  │             │  │             │        │
+│  │ - Handshake │  │ - Message   │  │ - Game Loop │        │
+│  │ - Framing   │  │ - Protocol  │  │ - Physics   │        │
+│  │ - Encoding  │  │ - State     │  │ - Collision │        │
+│  └─────────────┘  └─────────────┘  └──────┬──────┘        │
+│                                            │                 │
+│                    ┌───────────────────────┴──┐             │
+│                    │     Game Models          │             │
+│                    │  - Player                │             │
+│                    │  - Bullet                │             │
+│                    │  - PowerUp               │             │
+│                    └──────────────────────────┘             │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Key Points**:
+## Server Architecture
 
-- Main thread never blocks on client processing
-- Each client has dedicated thread for I/O
-- Game loop has dedicated thread (never blocks)
-- No thread starvation
+### Core Components
 
-### Synchronization Strategy
+#### 1. GameServer (Main Entry Point)
+**Location**: `server/src/main/java/com/minitankfire/server/GameServer.java`
 
-**Per-Collection Synchronization** (ConcurrentHashMap):
+**Responsibilities:**
+- Initialize TCP ServerSocket on port 8080
+- Accept incoming client connections
+- Manage thread pool for concurrent client handling
+- Initialize and maintain GameRoom instance
+- Handle graceful shutdown
+
+**Key Design Decisions:**
+- Uses `ExecutorService` with fixed thread pool (100 threads max)
+- Each client connection runs in separate thread
+- TCP socket options: `setTcpNoDelay(true)` for low latency
 
 ```java
-// Thread-safe operations
-bullets.entrySet().removeIf(entry -> !entry.getValue().isActive());
-players.get(playerId).setX(newX);
+ServerSocket serverSocket = new ServerSocket(8080);
+ExecutorService clientThreadPool = Executors.newFixedThreadPool(MAX_CLIENTS);
 ```
 
-**Volatile Fields**:
+#### 2. WebSocketHandler (Protocol Layer)
+**Location**: `server/src/main/java/com/minitankfire/network/WebSocketHandler.java`
+
+**Responsibilities:**
+- Implement RFC 6455 WebSocket protocol
+- Perform HTTP upgrade handshake
+- Encode/decode WebSocket frames
+- Handle control frames (ping, pong, close)
+- Manage binary and text messages
+
+**Protocol Implementation:**
+```java
+// Handshake - Compute WebSocket accept key
+String key = headers.get("sec-websocket-key");
+String accept = Base64.getEncoder().encodeToString(
+    MessageDigest.getInstance("SHA-1").digest(
+        (key + WEBSOCKET_GUID).getBytes()
+    )
+);
+```
+
+**Frame Structure:**
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-------+-+-------------+-------------------------------+
+|F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+|I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
+|N|V|V|V|       |S|             |   (if payload len==126/127)   |
+| |1|2|3|       |K|             |                               |
++-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+|     Extended payload length continued, if payload len == 127  |
++ - - - - - - - - - - - - - - - +-------------------------------+
+|                               |Masking-key, if MASK set to 1  |
++-------------------------------+-------------------------------+
+| Masking-key (continued)       |          Payload Data         |
++-------------------------------- - - - - - - - - - - - - - - - +
+:                     Payload Data continued ...                :
++ - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+|                     Payload Data continued ...                |
++---------------------------------------------------------------+
+```
+
+#### 3. ClientHandler (Connection Manager)
+**Location**: `server/src/main/java/com/minitankfire/network/ClientHandler.java`
+
+**Responsibilities:**
+- Manage individual client connection lifecycle
+- Parse incoming messages
+- Route messages to appropriate handlers
+- Broadcast game state updates
+- Handle disconnections gracefully
+
+**Message Flow:**
+```
+Client → WebSocket Frame → ClientHandler → GameRoom
+                                              ↓
+                                         Process Logic
+                                              ↓
+GameRoom → ClientHandler → WebSocket Frame → Client
+```
+
+#### 4. GameRoom (Game Logic Core)
+**Location**: `server/src/main/java/com/minitankfire/game/GameRoom.java`
+
+**Responsibilities:**
+- Main game loop (20 FPS / 50ms tick)
+- Player state management
+- Bullet physics and collision detection
+- Power-up spawning and collection
+- Score tracking and leaderboard
+- Respawn system
+
+**Thread Safety:**
+```java
+// All game state uses thread-safe collections
+private Map<String, Player> players = new ConcurrentHashMap<>();
+private Map<String, Bullet> bullets = new ConcurrentHashMap<>();
+private Map<String, PowerUp> powerUps = new ConcurrentHashMap<>();
+```
+
+**Game Loop Architecture:**
+```java
+while (gameRunning) {
+    long startTime = System.currentTimeMillis();
+    
+    // 1. Update player power-ups
+    updatePowerUpTimers();
+    
+    // 2. Update bullet positions
+    updateBullets();
+    
+    // 3. Check collisions
+    checkCollisions();
+    
+    // 4. Spawn power-ups
+    spawnPowerUps();
+    
+    // 5. Broadcast state
+    broadcastGameState();
+    
+    // 6. Maintain 50ms tick rate
+    long elapsed = System.currentTimeMillis() - startTime;
+    Thread.sleep(Math.max(0, GAME_TICK_MS - elapsed));
+}
+```
+
+### Data Models
+
+#### Player Model
+```java
+public class Player {
+    private String id;           // Unique identifier
+    private String name;         // Display name
+    private int x, y;           // Position (pixels)
+    private int angle;          // Rotation (degrees)
+    private int score;          // Kill count
+    private int health;         // 0-100
+    private boolean alive;      // Death state
+    private boolean hasShield;  // Shield power-up
+    private boolean speedBoost; // Speed power-up
+    private boolean doubleFire; // Double fire power-up
+}
+```
+
+#### Bullet Model
+```java
+public class Bullet {
+    private String id;          // Unique identifier
+    private String playerId;    // Owner
+    private int x, y;          // Position
+    private double vx, vy;     // Velocity vector
+    private long spawnTime;    // For lifetime tracking
+}
+```
+
+#### PowerUp Model
+```java
+public class PowerUp {
+    private String id;          // Unique identifier
+    private String type;        // shield, speed, doubleFire
+    private int x, y;          // Position
+    private long spawnTime;    // For lifetime tracking
+}
+```
+
+## Client Architecture
+
+### Core Components
+
+#### 1. GameClient (Main Controller)
+**Location**: `client/js/game-client.js`
+
+**Responsibilities:**
+- Initialize all managers
+- Maintain local game state
+- Handle game loop and rendering
+- Process server messages
+- Manage settings and preferences
+
+**Manager Instances:**
+```javascript
+class GameClient {
+    constructor() {
+        this.uiManager = new UIManager(this);
+        this.networkManager = new NetworkManager(this);
+        this.voiceChatManager = new VoiceChatManager(this);
+        this.renderer = new Renderer(this.canvas, this.minimapCanvas, this);
+        this.inputManager = new InputManager(this);
+    }
+}
+```
+
+#### 2. Renderer (Graphics Engine)
+**Location**: `client/js/core/renderer.js`
+
+**Responsibilities:**
+- Canvas 2D rendering
+- Player tank visualization
+- Bullet trails and effects
+- Power-up animations
+- Minimap rendering
+- Screen shake effects
+
+**Rendering Pipeline:**
+```javascript
+render() {
+    // 1. Clear canvas
+    this.clearCanvas();
+    
+    // 2. Draw background grid
+    this.drawGrid();
+    
+    // 3. Draw power-ups
+    this.drawPowerUps();
+    
+    // 4. Draw bullets with trails
+    this.drawBullets();
+    
+    // 5. Draw players (tanks)
+    this.drawPlayers();
+    
+    // 6. Draw UI overlays
+    this.drawUI();
+    
+    // 7. Update minimap
+    this.updateMinimap();
+}
+```
+
+**Tank Rendering:**
+```
+    Turret (rotating)
+         │
+    ┌────┴────┐
+    │  Tank   │  ← Main body (square)
+    │  Body   │  ← Rotates with movement
+    └─────────┘
+    ┌─┐ ┌─┐
+    └─┘ └─┘     ← Tracks (decorative)
+```
+
+#### 3. InputManager (User Input)
+**Location**: `client/js/core/input-manager.js`
+
+**Responsibilities:**
+- Keyboard input (WASD)
+- Mouse position and clicks
+- Input state tracking
+- Send input to server
+
+**Input State:**
+```javascript
+{
+    keys: {
+        w: false, a: false, s: false, d: false
+    },
+    mouse: {
+        x: 0, y: 0, angle: 0, down: false
+    }
+}
+```
+
+#### 4. NetworkManager (Communication)
+**Location**: `client/js/managers/network-manager.js`
+
+**Responsibilities:**
+- WebSocket connection management
+- Message serialization/deserialization
+- Ping/pong latency tracking
+- Reconnection logic
+- Protocol handling
+
+**Message Types:**
+```javascript
+// Client → Server
+{ type: 'join', name: 'Player' }
+{ type: 'input', keys: {...}, angle: 45 }
+{ type: 'fire', angle: 45 }
+{ type: 'chat', message: 'Hello' }
+{ type: 'ping', timestamp: 1234567890 }
+
+// Server → Client
+{ type: 'init', playerId: 'uuid', x: 100, y: 100 }
+{ type: 'game_state', players: [...], bullets: [...], powerUps: [...] }
+{ type: 'pong', timestamp: 1234567890 }
+{ type: 'player_died', killerId: 'uuid', victimId: 'uuid' }
+```
+
+#### 5. UIManager (User Interface)
+**Location**: `client/js/managers/ui-manager.js`
+
+**Responsibilities:**
+- Join screen management
+- Settings panel
+- Leaderboard updates
+- Kill feed notifications
+- Chat system
+- Network stats display
+
+#### 6. VoiceChatManager (Voice Communication)
+**Location**: `client/js/managers/voice-chat-manager.js`
+
+**Responsibilities:**
+- WebRTC peer connections
+- Audio stream management
+- Mute/unmute controls
+- Peer discovery
+
+## Communication Protocol
+
+### Message Flow Diagram
+
+```
+┌─────────┐                                    ┌─────────┐
+│ Client  │                                    │ Server  │
+└────┬────┘                                    └────┬────┘
+     │                                              │
+     │  1. WebSocket Handshake (HTTP Upgrade)      │
+     ├─────────────────────────────────────────────>│
+     │                                              │
+     │  2. 101 Switching Protocols                 │
+     │<─────────────────────────────────────────────┤
+     │                                              │
+     │  3. join message (name)                     │
+     ├─────────────────────────────────────────────>│
+     │                                              │
+     │  4. init message (playerId, spawn pos)      │
+     │<─────────────────────────────────────────────┤
+     │                                              │
+     │  5. input messages (continuous)             │
+     ├─────────────────────────────────────────────>│
+     │                                              │
+     │  6. game_state broadcasts (20 FPS)          │
+     │<─────────────────────────────────────────────┤
+     │                                              │
+     │  7. fire message (on click)                 │
+     ├─────────────────────────────────────────────>│
+     │                                              │
+     │  8. ping (every 2s)                         │
+     ├─────────────────────────────────────────────>│
+     │                                              │
+     │  9. pong (immediate)                        │
+     │<─────────────────────────────────────────────┤
+     │                                              │
+```
+
+### State Synchronization
+
+**Server as Authority:**
+- Server maintains authoritative game state
+- Client sends inputs, not positions
+- Server validates all actions
+- Server broadcasts confirmed state
+
+**Client Prediction:**
+- Client immediately moves locally
+- Reconciled with server state on update
+- Reduces perceived latency
+
+## Performance Considerations
+
+### Server Optimizations
+
+1. **Thread Pool**: Fixed-size thread pool prevents resource exhaustion
+2. **ConcurrentHashMap**: Lock-free reads for game state
+3. **TCP_NODELAY**: Disabled Nagle's algorithm for low latency
+4. **Fixed Tick Rate**: Predictable CPU usage (50ms)
+5. **Spatial Indexing**: Simple grid-based collision detection
+
+### Client Optimizations
+
+1. **RequestAnimationFrame**: Synced with display refresh
+2. **Canvas Double Buffering**: Smooth rendering
+3. **Object Pooling**: Reuse particle objects
+4. **Culling**: Only render visible entities
+5. **Delta Time**: Frame-rate independent movement
+
+## Security Considerations
+
+### Server-Side Validation
 
 ```java
-private volatile boolean gameRunning = true;  // Visibility across threads
+// Validate all client inputs
+if (x < MIN_X || x > MAX_X || y < MIN_Y || y > MAX_Y) {
+    // Reject invalid position
+    return;
+}
+
+// Rate limiting for fire command
+long now = System.currentTimeMillis();
+if (now - player.getLastFireTime() < FIRE_RATE_MS) {
+    // Reject rapid fire
+    return;
+}
 ```
 
-**No Deadlocks**:
+### Connection Security
 
-- Single lock per collection
-- No nested locking
-- No waiting on other threads
+- WebSocket origin checking (configurable)
+- Input sanitization for player names
+- Chat message filtering
+- Connection rate limiting
+- Max payload size enforcement
 
----
+## Scalability
 
-## Technology Stack
+### Current Limitations
 
-### Backend
+- Single game room (all players in one world)
+- Single server instance
+- In-memory state (no persistence)
+- Max 100 concurrent players
 
-| Component     | Technology          | Version  | Why?                     |
-| ------------- | ------------------- | -------- | ------------------------ |
-| Language      | Java                | 11+      | Core language            |
-| Networking    | ServerSocket/Socket | Built-in | Pure Java requirement    |
-| Protocol      | WebSocket           | RFC 6455 | Real-time bidirectional  |
-| Threading     | ExecutorService     | Built-in | Thread pool management   |
-| Serialization | Custom JsonUtil     | -        | NO external dependencies |
-| Build Tool    | Maven               | 3.x      | Dependency management    |
+### Future Scaling Options
 
-### Frontend
+1. **Multiple Rooms**: Separate GameRoom instances
+2. **Load Balancing**: Multiple server instances
+3. **Redis**: Shared state across servers
+4. **Database**: Persistent player accounts
+5. **CDN**: Static client asset delivery
 
-| Component  | Technology     | Version | Why?                    |
-| ---------- | -------------- | ------- | ----------------------- |
-| Markup     | HTML5          | -       | Canvas-based rendering  |
-| Styling    | CSS3           | -       | Modern design           |
-| Logic      | JavaScript ES6 | -       | Client game loop        |
-| Canvas API | HTML5 Canvas   | -       | 2D graphics             |
-| WebSocket  | Native API     | -       | Real-time communication |
-| Voice      | WebRTC         | -       | P2P voice chat          |
-| Icons      | Font Awesome   | 6.4.0   | UI iconography          |
-
-** Assignment Compliance**: Server uses **ONLY** core Java APIs - no external networking frameworks!
-
----
-
-## Performance Characteristics
+## Technology Stack Summary
 
 ### Server
-
-| Metric                 | Value                         |
-| ---------------------- | ----------------------------- |
-| Max Concurrent Clients | 100                           |
-| Game Update Rate       | 20 FPS (50ms per tick)        |
-| WebSocket Protocol     | RFC 6455                      |
-| Message Latency        | <50ms (depends on network)    |
-| Memory per Client      | ~5KB (base) + network buffers |
-| Thread Pool Size       | 100 threads (configurable)    |
+- **Language**: Java 11+
+- **Build Tool**: Maven 3.6+
+- **Networking**: java.net (ServerSocket, Socket)
+- **Concurrency**: java.util.concurrent (ExecutorService, ConcurrentHashMap)
+- **Protocol**: Custom WebSocket RFC 6455 implementation
+- **Serialization**: Manual JSON (no libraries)
 
 ### Client
+- **Languages**: HTML5, CSS3, JavaScript ES6+
+- **Graphics**: Canvas 2D API
+- **Networking**: Browser WebSocket API
+- **Audio**: HTML5 Audio API
+- **Voice**: WebRTC API
+- **Build**: None (vanilla JavaScript modules)
 
-| Metric           | Value                          |
-| ---------------- | ------------------------------ |
-| Render Rate      | 60 FPS (requestAnimationFrame) |
-| Canvas Size      | 800×600 pixels                 |
-| Update Frequency | 20 FPS from server             |
-| Minimap Update   | Every 100ms                    |
-| Particle Cap     | 500 simultaneous               |
+## Deployment Architecture
+
+```
+┌──────────────────────────────────────────────┐
+│           Client Deployment                   │
+│  ┌────────────────────────────────────────┐  │
+│  │   Static File Server (Python/Nginx)    │  │
+│  │   Port: 3000                           │  │
+│  │   Files: HTML, CSS, JS, Audio         │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+                     │
+                     │ HTTP/HTTPS
+                     │
+┌──────────────────────────────────────────────┐
+│           Server Deployment                   │
+│  ┌────────────────────────────────────────┐  │
+│  │   Java GameServer                      │  │
+│  │   Port: 8080                           │  │
+│  │   Protocol: WebSocket (ws://)          │  │
+│  │   JVM: Java 11+                        │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+```
+
+## Monitoring & Debugging
+
+### Server Logs
+```
+[SERVER] Waiting for connections...
+[CONNECTION] New client connected: 192.168.1.100:52341
+[HANDSHAKE] WebSocket handshake successful
+[GAME] Player 'Tank123' joined (ID: abc-123)
+[GAME] Player 'Tank123' fired bullet
+[GAME] Bullet hit! Player 'Tank456' health: 80
+[GAME] Player 'Tank456' collected power-up: shield
+```
+
+### Client Debug Console
+```javascript
+// Network stats
+console.log('Ping:', this.currentPing, 'ms');
+console.log('Players:', Object.keys(this.players).length);
+
+// Performance metrics
+console.log('FPS:', this.fps);
+console.log('Frame time:', this.frameTime, 'ms');
+```
 
 ---
 
-## Conclusion
-
-The architecture prioritizes:
-
-- ✅ **Real-time responsiveness** (20 FPS game updates)
-- ✅ **Scalability** (thread pool, concurrent collections)
-- ✅ **Educational clarity** (pure Java, no frameworks)
-- ✅ **Network efficiency** (binary frames, message batching)
-- ✅ **Clear code organization** (package by responsibility)
-- ✅ **Thread safety** (no race conditions)
+**Last Updated**: November 14, 2025

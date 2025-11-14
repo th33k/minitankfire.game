@@ -9,9 +9,15 @@ export class NetworkManager {
         this.currentPing = 0;
     }
 
+    // Determine the correct WebSocket protocol based on page protocol
+    getWebSocketProtocol() {
+        return window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    }
+
     connectToLobby(serverAddress) {
         try {
-            this.lobbyWs = new WebSocket(`ws://${serverAddress}:8080/game`);
+            const protocol = this.getWebSocketProtocol();
+            this.lobbyWs = new WebSocket(`${protocol}//${serverAddress}:8080/game`);
             
             this.lobbyWs.onopen = () => {
                 this.sendLobbyMessage({ type: 'lobby_info' });
@@ -48,7 +54,8 @@ export class NetworkManager {
     }
 
     connectToGame(name, serverAddress, onOpen, onMessage, onClose, onError) {
-        const wsUrl = `ws://${serverAddress}:8080/game`;
+        const protocol = this.getWebSocketProtocol();
+        const wsUrl = `${protocol}//${serverAddress}:8080/game`;
         console.log('Attempting to connect to:', wsUrl);
         
         this.ws = new WebSocket(wsUrl);

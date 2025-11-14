@@ -2,10 +2,12 @@ package com.minitankfire.server;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -26,8 +28,35 @@ import com.minitankfire.network.ClientHandler;
  * - java.util.concurrent (threading)
  */
 public class GameServer {
-    private static final int DEFAULT_PORT = 8080;
-    private static final int MAX_CLIENTS = 100;
+    private static int DEFAULT_PORT;
+    private static int MAX_CLIENTS;
+    private static int DEFAULT_WINNING_SCORE;
+
+    static {
+        loadConfig();
+    }
+
+    private static void loadConfig() {
+        Properties props = new Properties();
+        try (InputStream input = GameServer.class.getClassLoader().getResourceAsStream("config.properties")) {
+            if (input != null) {
+                props.load(input);
+                DEFAULT_PORT = Integer.parseInt(props.getProperty("server.port", "8080"));
+                MAX_CLIENTS = Integer.parseInt(props.getProperty("server.maxClients", "100"));
+                DEFAULT_WINNING_SCORE = Integer.parseInt(props.getProperty("game.winningScore", "10"));
+            } else {
+                // Fallback to defaults if config not found
+                DEFAULT_PORT = 8080;
+                MAX_CLIENTS = 100;
+                DEFAULT_WINNING_SCORE = 10;
+            }
+        } catch (IOException e) {
+            System.err.println("[CONFIG] Error loading config.properties: " + e.getMessage());
+            DEFAULT_PORT = 8080;
+            MAX_CLIENTS = 100;
+            DEFAULT_WINNING_SCORE = 10;
+        }
+    }
 
     private ServerSocket serverSocket;
     private ExecutorService clientThreadPool;
@@ -159,25 +188,25 @@ public class GameServer {
             }
         }
 
-        int winningScore = 10;
+        int winningScore = DEFAULT_WINNING_SCORE;
 
         // Winning score via second arg or prompt
         if (args.length > 1) {
             try {
                 winningScore = Integer.parseInt(args[1]);
             } catch (NumberFormatException e) {
-                System.err.println("[ERROR] Invalid winning score argument, using default: " + winningScore);
+                System.err.println("[ERROR] Invalid winning score argument, using default: " + DEFAULT_WINNING_SCORE);
             }
         } else {
             try {
-                System.out.print("Enter winning score (default " + winningScore + "): ");
+                System.out.print("Enter winning score (default " + DEFAULT_WINNING_SCORE + "): ");
                 BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
                 String line = br.readLine();
                 if (line != null && !line.trim().isEmpty()) {
                     try {
                         winningScore = Integer.parseInt(line.trim());
                     } catch (NumberFormatException e) {
-                        System.err.println("[ERROR] Invalid number entered, using default: " + winningScore);
+                        System.err.println("[ERROR] Invalid number entered, using default: " + DEFAULT_WINNING_SCORE);
                     }
                 }
             } catch (IOException e) {
